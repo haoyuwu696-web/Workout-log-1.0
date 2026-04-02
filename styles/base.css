@@ -15,6 +15,12 @@
 
   /* iOS Safari: 添加到主屏幕后会进入 standalone 模式 */
   @media all and (display-mode: standalone) {
+    html,
+    body {
+      height: 100%;
+      overflow: hidden; /* 防止页面层上下抖动；只让 content-area 滚动 */
+    }
+
     body {
       min-height: 100dvh;
       align-items: stretch;
@@ -24,6 +30,9 @@
     .phone-container {
       width: 100vw !important;
       height: 100dvh !important;
+      position: fixed;
+      top: 0;
+      left: 0;
       border-radius: 0 !important;
       box-shadow: none !important;
     }
