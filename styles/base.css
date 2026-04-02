@@ -22,10 +22,15 @@
       position: fixed;
       width: 100%;
       overscroll-behavior: none;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
     }
 
     body {
       min-height: 100dvh;
+      display: block; /* 避免 flex 在 standalone 下因视口变化重新居中抖动 */
       align-items: stretch;
       justify-content: stretch;
     }
