@@ -12,5 +12,21 @@
     align-items: center;
     background-color: #000;
   }
+
+  /* iOS Safari: 添加到主屏幕后会进入 standalone 模式 */
+  @media all and (display-mode: standalone) {
+    body {
+      min-height: 100dvh;
+      align-items: stretch;
+      justify-content: stretch;
+    }
+
+    .phone-container {
+      width: 100vw !important;
+      height: 100dvh !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+  }
 }
 
