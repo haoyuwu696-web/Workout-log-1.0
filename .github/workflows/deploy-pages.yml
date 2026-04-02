@@ -29,9 +29,18 @@ jobs:
       - run: npm run build:css
       - run: npm run build:site
 
+      - name: Verify build output
+        run: |
+          echo "Listing _site:"
+          ls -la _site
+          test -f _site/index.html
+          test -f _site/pages/index.html
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+          name: github-pages
+          if-no-files-found: error
 
   deploy:
     needs: build
