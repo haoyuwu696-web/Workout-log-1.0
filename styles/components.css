@@ -1,0 +1,17 @@
+@layer components {
+  .card {
+    @apply rounded-card bg-white p-4 shadow-card;
+  }
+
+  .list-item {
+    @apply flex items-center justify-between border-b border-gray-100 py-3 last:border-b-0;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white;
+  }
+
+  .input-base {
+    @apply w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-brand-primary;
+  }
+}

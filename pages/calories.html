@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FitLog Pro - 数据看板</title>
+<link rel="stylesheet" href="../styles/pages/calories.css"/>
+<link rel="stylesheet" href="../styles/output.css"/>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/echarts.min.5.4.3.js"></script>
+<script src="../scripts/core/seed-data.js"></script>
+<script src="../scripts/core/app-common.js"></script>
+</head>
+<body>
+<div class="phone-container">
+<!-- Status Bar -->
+<div class="status-bar">
+<span>09:41</span>
+<div class="flex gap-1">
+<iconify-icon icon="ion:cellular"></iconify-icon>
+<iconify-icon icon="ion:wifi"></iconify-icon>
+<iconify-icon icon="ion:battery-full"></iconify-icon>
+</div>
+</div>
+<div class="content-area">
+<header class="py-6 flex items-center justify-between">
+<div>
+<p class="text-xs text-gray-500 font-medium uppercase tracking-wider">热量管理</p>
+<h1 class="text-3xl font-bold text-gray-900">消耗估算</h1>
+</div>
+<a class="text-blue-500 text-sm font-semibold" href="./index.html">返回摘要</a>
+</header>
+<!-- TDEE / BMR Calculator -->
+<div class="card">
+<h3 class="font-bold mb-3">热量估算器 (BMR/TDEE)</h3>
+<div class="grid grid-cols-2 gap-2 text-sm">
+<input class="bg-gray-100 rounded p-2" data-label="年龄" data-max="120" data-min="10" data-required="true" data-validate="number" id="calcAge" type="number" placeholder="年龄" value="28"/>
+<input class="bg-gray-100 rounded p-2" data-label="身高" data-max="250" data-min="80" data-required="true" data-unit="cm" data-validate="number" id="calcHeight" type="number" placeholder="身高(cm)" value="178"/>
+<input class="bg-gray-100 rounded p-2" data-label="体重" data-max="300" data-min="20" data-required="true" data-unit="kg" data-validate="number" id="calcWeight" type="number" placeholder="体重(kg)" value="77.5" step="0.1"/>
+<select class="bg-gray-100 rounded p-2" id="calcGender">
+<option value="male">男</option>
+<option value="female">女</option>
+</select>
+<select class="bg-gray-100 rounded p-2 col-span-2" id="calcActivity">
+<option value="1.2">久坐 (1.2)</option>
+<option value="1.375">轻量活动 (1.375)</option>
+<option value="1.55" selected>中等活动 (1.55)</option>
+<option value="1.725">高活动 (1.725)</option>
+</select>
+<button class="bg-blue-500 text-white rounded p-2 col-span-2 font-semibold" id="calcTdeeBtn" type="button">计算建议热量</button>
+</div>
+<div class="mt-3 text-sm text-gray-600" id="calcResult">BMR -- kcal · TDEE -- kcal</div>
+<div class="mt-2 text-xs text-gray-400" id="goalHint">目标建议热量将显示在这里</div>
+</div>
+
+<!-- Daily Food Entries -->
+<div class="card">
+<div class="flex items-center justify-between mb-3">
+<h3 class="font-bold">今日饮食记录</h3>
+<span class="text-xs text-gray-400" id="foodTotalText">0 kcal</span>
+</div>
+<div class="grid grid-cols-4 gap-2 mb-2 text-sm">
+<input class="bg-gray-100 rounded p-2 col-span-2" id="foodNameInput" placeholder="食物名称" type="text"/>
+<input class="bg-gray-100 rounded p-2" data-label="热量" data-max="10000" data-min="1" data-required="true" data-unit="kcal" data-validate="number" id="foodCaloriesInput" placeholder="kcal" type="number"/>
+<button class="bg-gray-900 text-white rounded p-2" id="addFoodBtn" type="button">添加</button>
+</div>
+<div class="mb-3">
+<div class="text-xs text-gray-500 mb-2">常见食物快捷添加</div>
+<div class="flex flex-wrap gap-2" id="quickFoodButtons"></div>
+</div>
+<div class="mb-3">
+<div class="text-xs text-gray-500 mb-2">按克数估算（每100g热量）</div>
+<div class="grid grid-cols-5 gap-2 text-sm">
+<select class="bg-gray-100 rounded p-2 col-span-2" id="estFoodSelect">
+<option value="">选择食物</option>
+</select>
+<input class="bg-gray-100 rounded p-2" id="estFoodGramInput" min="1" placeholder="克数" type="number"/>
+<input class="bg-gray-100 rounded p-2" id="estFoodKcalInput" min="1" placeholder="kcal/100g" type="number"/>
+<button class="bg-blue-500 text-white rounded p-2" id="estAddBtn" type="button">估算添加</button>
+</div>
+</div>
+<div class="mb-2">
+<div class="text-xs text-gray-500 mb-2">最近常吃（点一下复用）</div>
+<div class="flex flex-wrap gap-2" id="recentFoodButtons"></div>
+</div>
+<div class="space-y-2" id="foodList"></div>
+</div>
+</div>
+<!-- Navigation Tab Bar -->
+<nav class="tab-bar">
+<a class="tab-item active" href="./index.html">
+<iconify-icon icon="ion:stats-chart" width="26"></iconify-icon>
+<span>摘要</span>
+</a>
+<a class="tab-item" href="./workout.html">
+<iconify-icon icon="ion:add-circle" width="26"></iconify-icon>
+<span>训练</span>
+</a>
+<a class="tab-item" href="./history.html">
+<iconify-icon icon="ion:calendar" width="26"></iconify-icon>
+<span>历史</span>
+</a>
+<a class="tab-item" href="./body.html">
+<iconify-icon icon="ion:accessibility" width="26"></iconify-icon>
+<span>身体数据</span>
+</a>
+<a class="tab-item" href="./settings.html">
+<iconify-icon icon="ion:settings" width="26"></iconify-icon>
+<span>设置</span>
+</a>
+</nav>
+</div>
+<script>
+  window.FitLogCommon?.initPage();
+        const seed = window.FITLOG_SEED || {};
+        const settings = JSON.parse(localStorage.getItem('fitlog:settings') || '{}');
+        const profile = JSON.parse(localStorage.getItem('fitlog:profile') || '{}');
+        const storedBodyRecords = JSON.parse(localStorage.getItem('fitlog:body:records') || '[]');
+        const bodyRecordsForMet = storedBodyRecords.length ? storedBodyRecords : (seed.bodyRecords || []);
+        const nutritionDaily = seed.nutritionDaily || [];
+
+        const today = new Date().toISOString().slice(0, 10);
+        const storedFoodLog = JSON.parse(localStorage.getItem('fitlog:nutrition:daily') || '[]');
+        const foodLog = storedFoodLog.length ? storedFoodLog : nutritionDaily;
+        const todayNutrition = foodLog.find((item) => item.date === today) || foodLog[0] || {
+          date: today,
+          targetCalories: 2200,
+          intakeCalories: 0,
+          burnedCalories: 0,
+          entries: []
+        };
+
+        const calcResult = document.getElementById('calcResult');
+        const goalHint = document.getElementById('goalHint');
+        const quickFoodButtons = document.getElementById('quickFoodButtons');
+        const recentFoodButtons = document.getElementById('recentFoodButtons');
+        const estFoodSelect = document.getElementById('estFoodSelect');
+        const estFoodGramInput = document.getElementById('estFoodGramInput');
+        const estFoodKcalInput = document.getElementById('estFoodKcalInput');
+        const estAddBtn = document.getElementById('estAddBtn');
+
+        const QUICK_FOODS = [
+          { name: '米饭一碗', kcal: 170, per100g: 116 },
+          { name: '鸡蛋一个', kcal: 70, per100g: 143 },
+          { name: '鸡胸肉100g', kcal: 120, per100g: 120 },
+          { name: '牛奶250ml', kcal: 130, per100g: 52 },
+          { name: '苹果一个', kcal: 95, per100g: 52 },
+          { name: '香蕉一根', kcal: 105, per100g: 89 }
+        ];
+
+        function saveFoodLog(updated) {
+          const withoutToday = foodLog.filter((item) => item.date !== todayNutrition.date);
+          const nextLog = [...withoutToday, updated];
+          localStorage.setItem('fitlog:nutrition:daily', JSON.stringify(nextLog));
+        }
+
+        const latestBodyRecord = [...bodyRecordsForMet].sort((a, b) => new Date(b.date) - new Date(a.date))[0] || {};
+        const userWeightKg = Number(profile.weightKg || profile.currentWeightKg || latestBodyRecord.weightKg || seed.profile?.currentWeightKg || 70);
+        const userHeightCm = Number(profile.heightCm || 175);
+        const userAge = Number(profile.age || 28);
+        const userGender = profile.gender === 'female' ? 'female' : 'male';
+        const activityFactor = Number(profile.activityFactor || settings.activityFactor || 1.375);
+        const baselineBmr = userGender === 'male'
+          ? 10 * userWeightKg + 6.25 * userHeightCm - 5 * userAge + 5
+          : 10 * userWeightKg + 6.25 * userHeightCm - 5 * userAge - 161;
+        const baselineTdee = baselineBmr * activityFactor;
+
+        function renderGoalHint(target, tdee) {
+          const maintenance = Math.round(tdee || target || 0);
+          const lose = Math.max(0, maintenance - 350);
+          const gain = Math.round(maintenance + 250);
+          goalHint.textContent = `维持 ${maintenance} kcal · 减脂 ${lose} kcal · 增肌 ${gain} kcal`;
+        }
+
+        function renderFoodList() {
+          const list = document.getElementById('foodList');
+          const total = (todayNutrition.entries || []).reduce((sum, item) => sum + Number(item.calories || 0), 0);
+          todayNutrition.intakeCalories = total;
+          document.getElementById('foodTotalText').textContent = `${total} kcal`;
+
+          if (!(todayNutrition.entries || []).length) {
+            window.FitLogCommon.setEmptyState(
+              list,
+              '暂无饮食记录',
+              '添加第一条',
+              () => document.getElementById('foodNameInput')?.focus()
+            );
+            return;
+          }
+
+          list.innerHTML = todayNutrition.entries
+            .map(
+              (item, index) => `
+                  <div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 text-sm">
+                    <div>
+                      <div class="font-semibold">${item.name}</div>
+                      <div class="text-xs text-gray-400">${item.calories} kcal</div>
+                    </div>
+                    <button class="text-xs text-red-500 touch-target" data-remove-index="${index}" type="button">删除</button>
+                  </div>
+                `
+            )
+            .join('');
+
+          list.querySelectorAll('[data-remove-index]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const idx = Number(btn.dataset.removeIndex);
+              todayNutrition.entries.splice(idx, 1);
+              saveFoodLog(todayNutrition);
+              renderFoodList();
+              renderRecentFoodButtons();
+            });
+          });
+        }
+
+        function addFoodEntry(name, calories) {
+          if (!todayNutrition.entries) todayNutrition.entries = [];
+          todayNutrition.entries.push({ name, calories });
+          saveFoodLog(todayNutrition);
+          renderFoodList();
+          renderRecentFoodButtons();
+        }
+
+        function renderQuickFoodButtons() {
+          quickFoodButtons.innerHTML = QUICK_FOODS.map(
+            (item) => `<button class="bg-gray-100 text-xs px-2 py-1 rounded-full" data-quick-name="${item.name}" data-quick-kcal="${item.kcal}" type="button">${item.name} ${item.kcal}kcal</button>`
+          ).join('');
+          quickFoodButtons.querySelectorAll('[data-quick-name]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const name = String(btn.dataset.quickName || '').trim();
+              const kcal = Number(btn.dataset.quickKcal || 0);
+              if (!name || !kcal) return;
+              addFoodEntry(name, kcal);
+              window.FitLogCommon.showToast(`已添加：${name}`, 'success');
+            });
+          });
+        }
+
+        function renderEstimateFoodSelect() {
+          estFoodSelect.innerHTML = `<option value="">选择食物</option>${QUICK_FOODS.map(
+            (item) => `<option value="${item.name}" data-per100="${item.per100g}">${item.name}（${item.per100g} kcal/100g）</option>`
+          ).join('')}`;
+          estFoodSelect.addEventListener('change', () => {
+            const selected = estFoodSelect.options[estFoodSelect.selectedIndex];
+            if (!selected) return;
+            const per100 = Number(selected.dataset.per100 || 0);
+            if (per100 > 0) estFoodKcalInput.value = String(per100);
+          });
+        }
+
+        function collectRecentFoods() {
+          const map = new Map();
+          foodLog.forEach((day) => {
+            (day.entries || []).forEach((entry) => {
+              const name = String(entry.name || '').trim();
+              const calories = Number(entry.calories || 0);
+              if (!name || !calories) return;
+              if (!map.has(name)) map.set(name, calories);
+            });
+          });
+          return Array.from(map.entries()).slice(0, 8).map(([name, calories]) => ({ name, calories }));
+        }
+
+        function renderRecentFoodButtons() {
+          const recent = collectRecentFoods();
+          if (!recent.length) {
+            recentFoodButtons.innerHTML = '<span class="text-xs text-gray-400">暂无历史食物</span>';
+            return;
+          }
+          recentFoodButtons.innerHTML = recent.map(
+            (item) => `<button class="bg-blue-50 text-blue-600 text-xs px-2 py-1 rounded-full" data-recent-name="${item.name}" data-recent-kcal="${item.calories}" type="button">${item.name} ${item.calories}kcal</button>`
+          ).join('');
+          recentFoodButtons.querySelectorAll('[data-recent-name]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const name = String(btn.dataset.recentName || '').trim();
+              const kcal = Number(btn.dataset.recentKcal || 0);
+              if (!name || !kcal) return;
+              addFoodEntry(name, kcal);
+              window.FitLogCommon.showToast(`已复用：${name}`, 'success');
+            });
+          });
+        }
+
+        function bindEstimateAdd() {
+          estAddBtn.addEventListener('click', () => {
+            const name = String(estFoodSelect.value || '').trim();
+            const gramRes = window.FitLogCommon.validateNumber(estFoodGramInput.value, {
+              min: 1,
+              max: 3000,
+              required: true,
+              label: '克数',
+              unit: 'g'
+            });
+            const kcalPer100Res = window.FitLogCommon.validateNumber(estFoodKcalInput.value, {
+              min: 1,
+              max: 1200,
+              required: true,
+              label: '每100g热量',
+              unit: 'kcal'
+            });
+            if (!name) {
+              window.FitLogCommon.showToast('请先选择食物', 'error');
+              return;
+            }
+            if (!gramRes.ok || !kcalPer100Res.ok) {
+              const first = !gramRes.ok ? gramRes : kcalPer100Res;
+              window.FitLogCommon.showToast(first.message, 'error');
+              return;
+            }
+            const estimated = Math.round((gramRes.value * kcalPer100Res.value) / 100);
+            addFoodEntry(`${name} ${Math.round(gramRes.value)}g`, estimated);
+            window.FitLogCommon.showToast(`估算添加 ${estimated} kcal`, 'success');
+            estFoodGramInput.value = '';
+          });
+        }
+        renderFoodList();
+        renderQuickFoodButtons();
+        renderEstimateFoodSelect();
+        renderRecentFoodButtons();
+        bindEstimateAdd();
+
+        const calcAge = document.getElementById('calcAge');
+        const calcHeight = document.getElementById('calcHeight');
+        const calcWeight = document.getElementById('calcWeight');
+        const calcGender = document.getElementById('calcGender');
+        const calcActivity = document.getElementById('calcActivity');
+        const calcTdeeBtn = document.getElementById('calcTdeeBtn');
+
+        calcTdeeBtn.addEventListener('click', () => {
+          const ageRes = window.FitLogCommon.validateNumber(calcAge.value, {
+            min: 10,
+            max: 120,
+            required: true,
+            label: '年龄',
+            unit: ''
+          });
+          const heightRes = window.FitLogCommon.validateNumber(calcHeight.value, {
+            min: 80,
+            max: 250,
+            required: true,
+            label: '身高',
+            unit: 'cm'
+          });
+          const weightRes = window.FitLogCommon.validateNumber(calcWeight.value, {
+            min: 20,
+            max: 300,
+            required: true,
+            label: '体重',
+            unit: 'kg'
+          });
+          if (!ageRes.ok || !heightRes.ok || !weightRes.ok) {
+            const first = !ageRes.ok ? ageRes : !heightRes.ok ? heightRes : weightRes;
+            window.FitLogCommon.showToast(first.message, 'error');
+            return;
+          }
+
+          const age = ageRes.value;
+          const height = heightRes.value;
+          const weight = weightRes.value;
+          const activity = Number(calcActivity.value) || 1.2;
+          const isMale = calcGender.value === 'male';
+
+          const bmr = isMale
+            ? 10 * weight + 6.25 * height - 5 * age + 5
+            : 10 * weight + 6.25 * height - 5 * age - 161;
+          const tdee = bmr * activity;
+
+          calcResult.textContent = `BMR ${Math.round(bmr)} kcal · TDEE ${Math.round(tdee)} kcal（维持）`;
+          todayNutrition.targetCalories = Math.round(tdee);
+          saveFoodLog(todayNutrition);
+          renderGoalHint(todayNutrition.targetCalories, tdee);
+          window.FitLogCommon.showToast('已更新建议热量目标', 'success');
+        });
+
+        const foodNameInput = document.getElementById('foodNameInput');
+        const foodCaloriesInput = document.getElementById('foodCaloriesInput');
+        const addFoodBtn = document.getElementById('addFoodBtn');
+
+        addFoodBtn.addEventListener('click', () => {
+          const name = foodNameInput.value.trim();
+          const calRes = window.FitLogCommon.validateNumber(foodCaloriesInput.value, {
+            min: 1,
+            max: 10000,
+            required: true,
+            label: '热量',
+            unit: 'kcal'
+          });
+          if (!name) {
+            window.FitLogCommon.showToast('请填写食物名称', 'error');
+            return;
+          }
+          if (!calRes.ok) {
+            window.FitLogCommon.showToast(calRes.message, 'error');
+            return;
+          }
+
+          addFoodEntry(name, calRes.value);
+          window.FitLogCommon.showToast('已添加饮食条目', 'success');
+
+          foodNameInput.value = '';
+          foodCaloriesInput.value = '';
+        });
+
+        calcResult.textContent = `BMR ${Math.round(baselineBmr)} kcal · TDEE ${Math.round(baselineTdee)} kcal（估算）`;
+        renderGoalHint(todayNutrition.targetCalories, todayNutrition.targetCalories || baselineTdee);
+    </script>
+</body>
+</html>

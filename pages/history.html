@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FitLog Pro - 历史查看</title>
+<link rel="stylesheet" href="../styles/pages/history.css"/>
+<link rel="stylesheet" href="../styles/output.css"/>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/echarts.min.5.4.3.js"></script>
+<script src="../scripts/core/seed-data.js"></script>
+<script src="../scripts/core/app-common.js"></script>
+</head>
+<body>
+<div class="phone-container">
+<div class="status-bar">
+<span>09:41</span>
+<div class="flex gap-1">
+<iconify-icon icon="ion:cellular"></iconify-icon>
+<iconify-icon icon="ion:wifi"></iconify-icon>
+<iconify-icon icon="ion:battery-full"></iconify-icon>
+</div>
+</div>
+<div class="content-area relative">
+<header class="py-6 flex justify-between items-center">
+<h1 class="text-3xl font-bold">历史记录</h1>
+</header>
+<div class="grid grid-cols-3 gap-2 text-xs mb-4">
+<select class="bg-gray-100 border-none rounded-lg px-2 py-2" id="filterType">
+<option value="all">训练类型</option>
+<option value="全身训练">全身训练</option>
+<option value="肩部训练">肩部训练</option>
+<option value="腹部训练">腹部训练</option>
+<option value="腿部训练">腿部训练</option>
+<option value="胸部训练">胸部训练</option>
+<option value="背部训练">背部训练</option>
+<option value="手臂训练">手臂训练</option>
+<option value="有氧训练">有氧训练</option>
+</select>
+<select class="bg-gray-100 border-none rounded-lg px-2 py-2" id="filterMuscle">
+<option value="all">肌群筛选</option>
+<option value="胸部">胸部</option>
+<option value="背部">背部</option>
+<option value="腿部">腿部</option>
+<option value="肩部">肩部</option>
+<option value="手臂">手臂</option>
+</select>
+<select class="bg-gray-100 border-none rounded-lg px-2 py-2" id="filterRange">
+<option value="month" selected>近30天</option>
+<option value="week">近7天</option>
+<option value="all">全部</option>
+</select>
+</div>
+<div class="card mb-6">
+<h3 class="font-bold mb-2">训练统计</h3>
+<div class="grid grid-cols-2 gap-3 text-sm">
+<div class="bg-gray-50 rounded-lg px-3 py-2">
+<div class="text-xs text-gray-400">周训练频率</div>
+<div class="font-semibold" id="weeklyCount">0 次</div>
+</div>
+<div class="bg-gray-50 rounded-lg px-3 py-2">
+<div class="text-xs text-gray-400">月训练总容量</div>
+<div class="font-semibold" id="monthlyVolume">0 kg</div>
+</div>
+</div>
+</div>
+<div class="mb-4">
+<input class="w-full bg-gray-100 border-none rounded-lg text-sm px-3 py-2" id="sessionSearchInput" placeholder="搜索训练名称或日期" type="text"/>
+</div>
+<!-- Month Selection -->
+<div class="flex items-center justify-between mb-4 px-2">
+<button class="text-blue-500" id="prevMonthBtn" type="button"><iconify-icon icon="ion:chevron-back" width="20"></iconify-icon></button>
+<span class="font-bold" id="calendarMonthTitle">--</span>
+<button class="text-blue-500" id="nextMonthBtn" type="button"><iconify-icon icon="ion:chevron-forward" width="20"></iconify-icon></button>
+</div>
+<!-- Calendar View -->
+<div class="card">
+<div class="calendar-grid mb-2 text-gray-400 text-[10px] text-center uppercase">
+<span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+</div>
+<div class="calendar-grid text-center" id="historyCalendarGrid"></div>
+</div>
+<!-- Single Movement Search -->
+<div class="mb-6">
+<h3 class="font-bold mb-2 px-1">动作训练量趋势</h3>
+<div class="card">
+<div class="flex gap-2 mb-4">
+<input class="flex-1 bg-gray-100 border-none rounded-lg text-sm px-3 py-2" id="movementSearchInput" placeholder="搜索动作，例如：卧推（查看总吨位）" type="text"/>
+<button class="bg-blue-100 text-blue-600 px-3 rounded-lg text-sm font-bold" id="movementSearchBtn" type="button">查看趋势</button>
+</div>
+<div id="movementChart" style="width:100%; height:160px;"></div>
+</div>
+</div>
+<!-- Monthly List -->
+<div>
+<h3 class="font-bold mb-3 px-1" id="monthlyTitle">本月记录 (0次)</h3>
+<div class="space-y-3" id="historySessionList"></div>
+</div>
+</div>
+
+<div class="absolute inset-0 bg-black/40 hidden items-end z-50" id="sessionDetailModal">
+<div class="bg-white w-full rounded-t-2xl p-4 max-h-[70%] overflow-y-auto" id="sessionDetailPanel">
+<div class="flex justify-between items-center mb-3">
+<h3 class="text-lg font-bold">训练详情</h3>
+<button class="text-gray-400" id="closeDetailModal" type="button">
+<iconify-icon icon="ion:close" width="24"></iconify-icon>
+</button>
+</div>
+<div class="text-sm text-gray-600 space-y-1 mb-3">
+<div id="detailMeta"></div>
+<div id="detailVolume"></div>
+<div id="detailNote"></div>
+</div>
+<div>
+<h4 class="font-semibold mb-2">动作项</h4>
+<div class="space-y-2" id="detailItems"></div>
+</div>
+</div>
+</div>
+<!-- Navigation Tab Bar -->
+<nav class="tab-bar">
+<a class="tab-item" href="./index.html">
+<iconify-icon icon="ion:stats-chart" width="26"></iconify-icon>
+<span>摘要</span>
+</a>
+<a class="tab-item" href="./workout.html">
+<iconify-icon icon="ion:add-circle" width="26"></iconify-icon>
+<span>训练</span>
+</a>
+<a class="tab-item active" href="./history.html">
+<iconify-icon icon="ion:calendar" width="26"></iconify-icon>
+<span>历史</span>
+</a>
+<a class="tab-item" href="./body.html">
+<iconify-icon icon="ion:accessibility" width="26"></iconify-icon>
+<span>身体数据</span>
+</a>
+<a class="tab-item" href="./settings.html">
+<iconify-icon icon="ion:settings" width="26"></iconify-icon>
+<span>设置</span>
+</a>
+</nav>
+</div>
+<script>
+  window.FitLogCommon?.initPage();
+        const storedSessions = JSON.parse(localStorage.getItem('fitlog:workout:sessions') || '[]');
+        const mergedSessions = Array.isArray(storedSessions) ? storedSessions : [];
+        const settings = JSON.parse(localStorage.getItem('fitlog:settings') || '{}');
+        const preferredUnit = settings.weightUnit || 'kg';
+
+        const historySessionList = document.getElementById('historySessionList');
+        const monthlyTitle = document.getElementById('monthlyTitle');
+        const sessionSearchInput = document.getElementById('sessionSearchInput');
+        const detailModal = document.getElementById('sessionDetailModal');
+        const closeDetailModal = document.getElementById('closeDetailModal');
+        const detailMeta = document.getElementById('detailMeta');
+        const detailVolume = document.getElementById('detailVolume');
+        const detailNote = document.getElementById('detailNote');
+        const detailItems = document.getElementById('detailItems');
+        const filterType = document.getElementById('filterType');
+        const filterMuscle = document.getElementById('filterMuscle');
+        const filterRange = document.getElementById('filterRange');
+        const weeklyCount = document.getElementById('weeklyCount');
+        const monthlyVolume = document.getElementById('monthlyVolume');
+        const calendarGrid = document.getElementById('historyCalendarGrid');
+        const calendarMonthTitle = document.getElementById('calendarMonthTitle');
+        const prevMonthBtn = document.getElementById('prevMonthBtn');
+        const nextMonthBtn = document.getElementById('nextMonthBtn');
+        const WORKOUT_TYPE_OPTIONS = ['全身训练', '肩部训练', '腹部训练', '腿部训练', '胸部训练', '背部训练', '手臂训练', '有氧训练'];
+
+        function normalizeSessionWorkoutTypes(session) {
+          if (Array.isArray(session.workoutTypes) && session.workoutTypes.length) {
+            return session.workoutTypes.filter((item) => WORKOUT_TYPE_OPTIONS.includes(item));
+          }
+          const fallback = String(session.workoutType || '')
+            .split(/[、,/|+]/)
+            .map((item) => item.trim())
+            .filter(Boolean);
+          const normalized = fallback.map((item) => (item.endsWith('训练') ? item : `${item}训练`));
+          const valid = normalized.filter((item) => WORKOUT_TYPE_OPTIONS.includes(item));
+          return valid.length ? valid : [session.workoutType || '训练记录'];
+        }
+
+        function sessionWorkoutTypeText(session) {
+          const types = normalizeSessionWorkoutTypes(session);
+          return types.join('、');
+        }
+
+        const orderedForList = [...mergedSessions].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const today = new Date();
+        let calendarCursor = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        function renderCalendar() {
+          const year = calendarCursor.getFullYear();
+          const month = calendarCursor.getMonth();
+          calendarMonthTitle.textContent = `${year}年${month + 1}月`;
+
+          const monthStart = new Date(year, month, 1);
+          const monthEnd = new Date(year, month + 1, 0);
+          const mondayOffset = (monthStart.getDay() + 6) % 7;
+          const startDate = new Date(year, month, 1 - mondayOffset);
+
+          const workoutDateSet = new Set(
+            mergedSessions
+              .map((s) => String(s.date || '').slice(0, 10))
+              .filter((d) => d.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`))
+          );
+
+          const cells = [];
+          for (let i = 0; i < 42; i += 1) {
+            const cellDate = new Date(startDate);
+            cellDate.setDate(startDate.getDate() + i);
+            const day = cellDate.getDate();
+            const isCurrentMonth = cellDate >= monthStart && cellDate <= monthEnd;
+            const dateKey = `${cellDate.getFullYear()}-${String(cellDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const hasWorkout = workoutDateSet.has(dateKey);
+            const isToday = dateKey === new Date().toISOString().slice(0, 10);
+            const classNames = [
+              'calendar-day',
+              !isCurrentMonth ? 'text-gray-300' : '',
+              hasWorkout ? 'has-workout' : '',
+              isToday ? 'bg-blue-300' : ''
+            ]
+              .filter(Boolean)
+              .join(' ');
+            cells.push(`<span class="${classNames}">${day}</span>`);
+          }
+          calendarGrid.innerHTML = cells.join('');
+        }
+
+        function withinRange(session, range) {
+          if (range === 'all') return true;
+          const days = range === 'week' ? 7 : 30;
+          const date = new Date(session.date || session.startedAt || Date.now());
+          const diff = (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24);
+          return diff <= days;
+        }
+
+        function getSessionVolumeKg(session) {
+          const totalVolumeKg = Number(session.totalVolumeKg);
+          if (Number.isFinite(totalVolumeKg) && totalVolumeKg >= 0) return totalVolumeKg;
+
+          const fallbackUnit = session.weightUnit === 'lb' ? 'lb' : 'kg';
+          const displayVolume = Number(session.totalVolumeDisplay);
+          if (!Number.isFinite(displayVolume) || displayVolume < 0) return 0;
+          return fallbackUnit === 'lb' ? displayVolume / 2.2046226218 : displayVolume;
+        }
+
+        function matchFilters(session) {
+          const typeMatch =
+            filterType.value === 'all' || normalizeSessionWorkoutTypes(session).includes(filterType.value);
+          const muscleMatch = filterMuscle.value === 'all' || (session.exercises || []).some((item) => item.muscleGroup === filterMuscle.value);
+          const rangeMatch = withinRange(session, filterRange.value);
+          return typeMatch && muscleMatch && rangeMatch;
+        }
+
+        function renderSummary(filtered) {
+          const weeklySessions = filtered.filter((session) => withinRange(session, 'week'));
+          const monthSessions = filtered.filter((session) => withinRange(session, 'month'));
+          weeklyCount.textContent = `${weeklySessions.length} 次`;
+
+          const totalVolumeKg = monthSessions.reduce((sum, session) => sum + getSessionVolumeKg(session), 0);
+          const unit = preferredUnit || 'kg';
+          const totalVolume = unit === 'lb'
+            ? Math.round(totalVolumeKg * 2.2046226218)
+            : Math.round(totalVolumeKg);
+          monthlyVolume.textContent = `${totalVolume.toLocaleString()} ${unit}`;
+        }
+
+        function renderSessionList(query = '') {
+          const normalized = query.trim().toLowerCase();
+          const filtered = orderedForList.filter((session) => {
+            const type = sessionWorkoutTypeText(session).toLowerCase();
+            const date = String(session.date || '').toLowerCase();
+            return matchFilters(session) && (!normalized || type.includes(normalized) || date.includes(normalized));
+          });
+
+          monthlyTitle.textContent = `本月记录 (${filtered.length}次)`;
+          renderSummary(filtered);
+
+          if (!filtered.length) {
+            window.FitLogCommon.setEmptyState(
+              historySessionList,
+              '暂无符合筛选条件的训练记录',
+              '去训练',
+              () => {
+                window.location.href = './workout.html';
+              }
+            );
+            monthlyTitle.textContent = '本月记录 (0次)';
+            renderSummary([]);
+            return;
+          }
+
+          historySessionList.innerHTML = filtered
+                .map((session, index) => {
+                  const weightUnit = preferredUnit || 'kg';
+                  const volumeKg = getSessionVolumeKg(session);
+                  const volume = weightUnit === 'lb'
+                    ? Math.round((volumeKg * 2.2046226218) * 10) / 10
+                    : Math.round(volumeKg * 10) / 10;
+
+                  return `
+                    <button class="card w-full text-left" data-session-id="${session.id}" type="button">
+                      <div class="flex justify-between items-start">
+                        <div>
+                          <h4 class="font-bold">${sessionWorkoutTypeText(session) || '训练记录'}</h4>
+                          <p class="text-xs text-gray-500 mt-1">${session.date || '--'} · ${session.durationMin || 0}分钟</p>
+                          <div class="mt-2 flex flex-wrap gap-2">
+                            <span class="bg-gray-100 text-[10px] px-2 py-1 rounded">总容量 ${Number(volume).toLocaleString()}${weightUnit}</span>
+                            <span class="bg-gray-100 text-[10px] px-2 py-1 rounded">8RM ${(() => {
+                              if (typeof session.eightRm === 'number') return session.eightRm;
+                              const oneRm = Number(session.oneRm || 0);
+                              return oneRm > 0 ? Math.round((oneRm / (1 + 8 / 30)) * 10) / 10 : 0;
+                            })()}</span>
+                            ${session.rpe ? `<span class="bg-gray-100 text-[10px] px-2 py-1 rounded">RPE ${session.rpe}</span>` : ''}
+                          </div>
+                        </div>
+                        <iconify-icon class="text-gray-300" icon="ion:chevron-forward"></iconify-icon>
+                      </div>
+                    </button>
+                  `;
+                })
+                .join('');
+
+          historySessionList.querySelectorAll('[data-session-id]').forEach((button) => {
+            button.addEventListener('click', () => {
+              const sessionId = button.dataset.sessionId;
+              const session = filtered.find((item) => item.id === sessionId);
+              if (!session) return;
+
+              const unit = preferredUnit || 'kg';
+              const volumeKg = getSessionVolumeKg(session);
+              const volume = unit === 'lb'
+                ? Math.round((volumeKg * 2.2046226218) * 10) / 10
+                : Math.round(volumeKg * 10) / 10;
+
+              detailMeta.textContent = `日期：${session.date || '--'} · 时长：${session.durationMin || 0} 分钟`;
+              detailVolume.textContent = `总容量：${Number(volume).toLocaleString()} ${unit}`;
+              detailNote.textContent = `备注：${session.note || '无'}${session.rpe ? ` · RPE ${session.rpe}` : ''}`;
+
+              const items = session.exercises || session.items || [];
+              detailItems.innerHTML = items.length
+                ? items
+                    .map((item) => {
+                      const setCount = Array.isArray(item.sets) ? item.sets.length : 0;
+                      const detailText = setCount ? `组数：${setCount}` : '无组数信息';
+                      return `<div class="bg-gray-100 rounded-lg p-2 text-sm"><div class="font-semibold">${item.name || item.exerciseName || '未命名动作'}</div><div class="text-xs text-gray-500 mt-1">${detailText}</div></div>`;
+                    })
+                    .join('')
+                : '<div class="text-xs text-gray-400">无动作明细</div>';
+
+              detailModal.classList.remove('hidden');
+              detailModal.classList.add('flex');
+            });
+          });
+        }
+
+        sessionSearchInput.addEventListener('input', (event) => {
+          renderSessionList(event.target.value);
+        });
+
+        [filterType, filterMuscle, filterRange].forEach((select) => {
+          select.addEventListener('change', () => renderSessionList(sessionSearchInput.value));
+        });
+
+        prevMonthBtn.addEventListener('click', () => {
+          calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() - 1, 1);
+          renderCalendar();
+        });
+
+        nextMonthBtn.addEventListener('click', () => {
+          calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() + 1, 1);
+          renderCalendar();
+        });
+
+        closeDetailModal.addEventListener('click', () => {
+          detailModal.classList.add('hidden');
+          detailModal.classList.remove('flex');
+        });
+
+        detailModal.addEventListener('click', (event) => {
+          if (event.target === detailModal) {
+            detailModal.classList.add('hidden');
+            detailModal.classList.remove('flex');
+          }
+        });
+
+        renderSessionList('');
+        renderCalendar();
+
+        const { chartTheme, bindChartResize } = window.FitLogCommon.chart;
+        const movementCtx = echarts.init(document.getElementById('movementChart'));
+        bindChartResize(movementCtx);
+        const movementSearchInput = document.getElementById('movementSearchInput');
+        const movementSearchBtn = document.getElementById('movementSearchBtn');
+
+        function movementVolumeOfSession(session, keyword) {
+          const normalized = keyword.trim().toLowerCase();
+          const exercises = Array.isArray(session.exercises) ? session.exercises : [];
+          if (!exercises.length) return 0;
+
+          const matched = normalized
+            ? exercises.filter((item) => String(item.name || item.exerciseName || '').toLowerCase().includes(normalized))
+            : exercises;
+          if (!matched.length) return 0;
+
+          const volume = matched.reduce((sum, item) => {
+            const sets = Array.isArray(item.sets) ? item.sets : [];
+            const setVolume = sets.reduce((setSum, set) => {
+              const weight = Number(set.weightKg || 0);
+              const reps = Number(set.reps || 0);
+              return setSum + weight * reps;
+            }, 0);
+            return sum + setVolume;
+          }, 0);
+
+          return Math.round(volume * 10) / 10;
+        }
+
+        function renderMovementChart(keyword = '') {
+          const normalized = keyword.trim().toLowerCase();
+          const source = normalized
+            ? mergedSessions.filter((session) => {
+                const exercises = (session.exercises || []).map((item) => String(item.name || '').toLowerCase());
+                return exercises.some((name) => name.includes(normalized));
+              })
+            : mergedSessions;
+
+          const chartData = [...source]
+            .sort((a, b) => new Date(a.date) - new Date(b.date))
+            .slice(-6);
+
+          const values = chartData.length
+            ? chartData.map((s) => movementVolumeOfSession(s, normalized))
+            : [0];
+          const hasData = values.some((v) => v > 0);
+
+          movementCtx.setOption({
+              textStyle: chartTheme.textStyle,
+              grid: chartTheme.grid,
+              tooltip: {
+                trigger: 'axis',
+                formatter: (params) => {
+                  const p = Array.isArray(params) ? params[0] : params;
+                  return `${p.axisValue}<br/>训练量 ${Number(p.data || 0).toLocaleString()} kg`;
+                }
+              },
+              xAxis: {
+                  type: 'category',
+                  data: chartData.length ? chartData.map((s) => s.date.slice(5).replace('-', '/')) : ['--'],
+                  axisLine: { show: false },
+                  axisLabel: { color: '#8E8E93', fontSize: 10 }
+              },
+              yAxis: {
+                  type: 'value',
+                  name: 'kg',
+                  axisLine: { show: false },
+                  splitLine: { lineStyle: { type: 'dashed' } },
+                  axisLabel: { color: '#8E8E93', fontSize: 10 }
+              },
+              series: [{
+                  data: values,
+                  type: 'line',
+                  smooth: true,
+                  symbol: 'circle',
+                  symbolSize: 6,
+                  itemStyle: {
+                      color: '#007AFF'
+                  },
+                  lineStyle: { width: 3 },
+                  areaStyle: {
+                    color: 'rgba(0, 122, 255, 0.12)'
+                  }
+              }],
+              graphic: !hasData
+                ? [{
+                    type: 'text',
+                    left: 'center',
+                    top: 'middle',
+                    style: {
+                      text: normalized ? '暂无该动作训练量数据' : '暂无动作训练量数据',
+                      fill: '#9CA3AF',
+                      fontSize: 12
+                    }
+                  }]
+                : []
+          });
+        }
+
+        movementSearchBtn.addEventListener('click', () => {
+          renderMovementChart(movementSearchInput.value);
+        });
+
+        movementSearchInput.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            renderMovementChart(movementSearchInput.value);
+          }
+        });
+
+        renderMovementChart('');
+    </script>
+</body>
+</html>

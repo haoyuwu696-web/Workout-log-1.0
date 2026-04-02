@@ -1,0 +1,29 @@
+@layer utilities {
+  .text-muted {
+    @apply text-gray-500;
+  }
+
+  .shadow-soft {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

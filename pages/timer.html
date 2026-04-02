@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FitLog Pro - 计时器</title>
+<link rel="stylesheet" href="../styles/pages/timer.css"/>
+<link rel="stylesheet" href="../styles/output.css"/>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+<script src="../scripts/core/app-common.js"></script>
+</head>
+<body>
+<div class="phone-container">
+<div class="status-bar">
+<span>09:41</span>
+<div class="flex gap-1">
+<iconify-icon icon="ion:cellular"></iconify-icon>
+<iconify-icon icon="ion:wifi"></iconify-icon>
+<iconify-icon icon="ion:battery-full"></iconify-icon>
+</div>
+</div>
+<div class="content-area flex-1 px-8 pt-12 pb-28">
+<div class="flex justify-between items-center mb-12">
+<a class="text-blue-500" href="./workout.html"><iconify-icon icon="ion:chevron-back" width="24"></iconify-icon> 返回</a>
+<h2 class="text-lg font-bold">组间休息</h2>
+<div class="w-10"></div>
+</div>
+<div class="timer-circle">
+<svg class="timer-progress">
+<circle cx="130" cy="130" fill="transparent" id="timerProgress" r="126" stroke="#007AFF" stroke-dasharray="791" stroke-dashoffset="0" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<span class="text-6xl font-light tracking-tight" id="timerDisplay">01:00</span>
+<span class="text-gray-400 mt-2 font-medium tracking-widest uppercase" id="timerStatus">READY</span>
+<div class="text-center text-xs text-gray-400 mt-3" id="timerHint">可从训练页自动带入组间休息时间</div>
+</div>
+<div class="grid grid-cols-4 gap-4 mb-16" id="presetContainer">
+<button class="preset-btn" data-seconds="30" type="button">30s</button>
+<button class="preset-btn active" data-seconds="60" type="button">60s</button>
+<button class="preset-btn" data-seconds="90" type="button">90s</button>
+<button class="preset-btn" data-seconds="120" type="button">120s</button>
+</div>
+<div class="flex flex-col gap-4">
+<button class="w-full py-4 bg-blue-500 text-white rounded-2xl font-bold text-lg shadow-lg shadow-blue-200" id="startPauseBtn" type="button">开始计时</button>
+<button class="w-full py-4 bg-gray-100 text-gray-400 rounded-2xl font-bold text-lg" id="resetBtn" type="button">重置</button>
+</div>
+</div>
+<nav class="tab-bar">
+<a class="tab-item" href="./index.html">
+<iconify-icon icon="ion:stats-chart" width="26"></iconify-icon>
+<span>摘要</span>
+</a>
+<a class="tab-item active" href="./workout.html">
+<iconify-icon icon="ion:add-circle" width="26"></iconify-icon>
+<span>训练</span>
+</a>
+<a class="tab-item" href="./history.html">
+<iconify-icon icon="ion:calendar" width="26"></iconify-icon>
+<span>历史</span>
+</a>
+<a class="tab-item" href="./body.html">
+<iconify-icon icon="ion:accessibility" width="26"></iconify-icon>
+<span>身体数据</span>
+</a>
+<a class="tab-item" href="./settings.html">
+<iconify-icon icon="ion:settings" width="26"></iconify-icon>
+<span>设置</span>
+</a>
+</nav>
+</div>
+<script>
+  window.FitLogCommon?.initPage();
+  const displayEl = document.getElementById('timerDisplay');
+  const statusEl = document.getElementById('timerStatus');
+  const progressEl = document.getElementById('timerProgress');
+  const presetContainer = document.getElementById('presetContainer');
+  const startPauseBtn = document.getElementById('startPauseBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const timerHint = document.getElementById('timerHint');
+
+  const CIRCUMFERENCE = 791;
+  const TIMER_SESSION_KEY = 'fitlog:session:timer';
+  const params = new URLSearchParams(window.location.search);
+  const hasRestParam = params.has('rest');
+  const linkedRest = Number(params.get('rest')) || 60;
+  const autoStart = params.get('autostart') === '1';
+
+  let savedTimer = null;
+  try {
+    const raw = sessionStorage.getItem(TIMER_SESSION_KEY);
+    savedTimer = raw ? JSON.parse(raw) : null;
+  } catch {
+    savedTimer = null;
+  }
+
+  const initialSeconds = hasRestParam
+    ? linkedRest
+    : savedTimer && typeof savedTimer.selectedSeconds === 'number' && !Number.isNaN(savedTimer.selectedSeconds)
+      ? savedTimer.selectedSeconds
+      : linkedRest;
+
+  const state = {
+    selectedSeconds: initialSeconds,
+    remainingSeconds: hasRestParam
+      ? linkedRest
+      : savedTimer && typeof savedTimer.remainingSeconds === 'number'
+        ? savedTimer.remainingSeconds
+        : initialSeconds,
+    isRunning: false,
+    intervalId: null,
+    hasPrompted: false
+  };
+
+  function persistTimerSession() {
+    try {
+      sessionStorage.setItem(
+        TIMER_SESSION_KEY,
+        JSON.stringify({
+          selectedSeconds: state.selectedSeconds,
+          remainingSeconds: state.remainingSeconds
+        })
+      );
+    } catch {
+      // ignore quota / private mode
+    }
+  }
+
+  window.addEventListener('pagehide', persistTimerSession);
+  window.addEventListener('beforeunload', persistTimerSession);
+
+  function formatTime(totalSeconds) {
+    const min = Math.floor(totalSeconds / 60);
+    const sec = totalSeconds % 60;
+    return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  }
+
+  function triggerNotice() {
+    if (navigator.vibrate) {
+      navigator.vibrate([180, 80, 180]);
+    }
+    const settings = window.FitLogCommon?.getSettings?.() || {};
+    const hasAudio = settings.timerSound !== 'off';
+    if (hasAudio) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = 880;
+        oscillator.connect(gain);
+        gain.connect(ctx.destination);
+        oscillator.start();
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.2);
+        oscillator.stop(ctx.currentTime + 0.2);
+      } catch {
+        // 忽略不支持音频上下文的环境
+      }
+    }
+  }
+
+  function updateDisplay() {
+    displayEl.textContent = formatTime(state.remainingSeconds);
+    const progress = state.selectedSeconds === 0 ? 0 : state.remainingSeconds / state.selectedSeconds;
+    progressEl.style.strokeDashoffset = String(CIRCUMFERENCE * (1 - progress));
+  }
+
+  function stopTimer(asDone = false) {
+    if (state.intervalId) {
+      clearInterval(state.intervalId);
+      state.intervalId = null;
+    }
+    state.isRunning = false;
+    startPauseBtn.textContent = state.remainingSeconds === 0 ? '重新开始' : '继续';
+    statusEl.textContent = asDone || state.remainingSeconds === 0 ? 'DONE' : 'PAUSED';
+    persistTimerSession();
+  }
+
+  function startTimer() {
+    if (state.remainingSeconds <= 0) {
+      state.remainingSeconds = state.selectedSeconds;
+    }
+    if (state.isRunning) return;
+
+    state.isRunning = true;
+    startPauseBtn.textContent = '暂停';
+    statusEl.textContent = 'RESTING';
+
+    state.intervalId = setInterval(() => {
+      state.remainingSeconds -= 1;
+      updateDisplay();
+
+      if (state.remainingSeconds <= 0) {
+        state.remainingSeconds = 0;
+        updateDisplay();
+        triggerNotice();
+        stopTimer(true);
+        persistTimerSession();
+      }
+    }, 1000);
+  }
+
+  function resetTimer() {
+    if (state.intervalId) {
+      clearInterval(state.intervalId);
+      state.intervalId = null;
+    }
+    state.isRunning = false;
+    state.remainingSeconds = state.selectedSeconds;
+    startPauseBtn.textContent = '开始计时';
+    statusEl.textContent = 'READY';
+    updateDisplay();
+    persistTimerSession();
+  }
+
+  presetContainer.querySelectorAll('.preset-btn').forEach((btn) => {
+    const seconds = Number(btn.dataset.seconds) || 60;
+    if (seconds === initialSeconds) {
+      presetContainer.querySelectorAll('.preset-btn').forEach((item) => item.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    btn.addEventListener('click', () => {
+      presetContainer.querySelectorAll('.preset-btn').forEach((item) => item.classList.remove('active'));
+      btn.classList.add('active');
+      state.selectedSeconds = seconds;
+      state.remainingSeconds = seconds;
+      resetTimer();
+      persistTimerSession();
+    });
+  });
+
+  startPauseBtn.addEventListener('click', () => {
+    if (state.isRunning) {
+      stopTimer(false);
+    } else {
+      startTimer();
+    }
+  });
+
+  resetBtn.addEventListener('click', resetTimer);
+
+  timerHint.textContent = `当前组间休息：${initialSeconds}s（支持声音/震动提示）`;
+  updateDisplay();
+
+  if (autoStart && !state.hasPrompted) {
+    state.hasPrompted = true;
+    startTimer();
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FitLog Pro - 训练记录</title>
+<link rel="stylesheet" href="../styles/pages/workout.css"/>
+<link rel="stylesheet" href="../styles/output.css"/>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+<script src="../scripts/core/app-common.js"></script>
+</head>
+<body>
+<div class="phone-container">
+<div class="status-bar">
+<span>09:41</span>
+<div class="flex gap-1">
+<iconify-icon icon="ion:cellular"></iconify-icon>
+<iconify-icon icon="ion:wifi"></iconify-icon>
+<iconify-icon icon="ion:battery-full"></iconify-icon>
+</div>
+</div>
+<div class="content-area">
+<header class="py-4 flex justify-between items-center">
+<h1 class="text-2xl font-bold">记录训练</h1>
+<a class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-500 shadow-sm" href="./timer.html" id="timerLink">
+<iconify-icon icon="ion:timer-outline" width="24"></iconify-icon>
+</a>
+</header>
+<!-- Metadata -->
+<div class="card space-y-3">
+<div class="flex justify-between border-b pb-2">
+<span class="text-gray-500">开始时间</span>
+<span class="font-medium text-blue-500">2026-03-27 15:42</span>
+</div>
+<div class="border-b pb-2">
+<div class="flex justify-between items-center">
+<span class="text-gray-500">训练类型</span>
+<button class="bg-gray-50 text-sm rounded-lg px-3 py-1 text-right min-w-32 touch-target" id="workoutTypePickerBtn" type="button">全身训练</button>
+</div>
+<div class="hidden mt-2 grid grid-cols-2 gap-2 text-xs" id="workoutTypePanel">
+<label class="bg-gray-50 rounded-lg px-2 py-2 flex items-center gap-2 touch-target"><input class="accent-blue-500" data-workout-type="全身训练" type="checkbox"/>全身训练</label>
+<label class="bg-gray-50 rounded-lg px-2 py-2 flex items-center gap-2 touch-target"><input class="accent-blue-500" data-workout-type="肩部训练" type="checkbox"/>肩部训练</label>
+<label class="bg-gray-50 rounded-lg px-2 py-2 flex items-center gap-2 touch-target"><input class="accent-blue-500" data-workout-type="腹部训练" type="checkbox"/>腹部训练</label>
+<label class="bg-gray-50 rounded-lg px-2 py-2 flex items-center gap-2 touch-target"><input class="accent-blue-500" data-workout-type="腿部训练" type="checkbox"/>腿部训练</label>
+<label class="bg-gray-50 rounded-lg px-2 py-2 flex items-center gap-2 touch-target"><input class="accent-blue-500" data-workout-type="胸部训练" type="checkbox"/>胸部训练</label>
+<label class="bg-gray-50 rounded-lg px-2 py-2 flex items-center gap-2 touch-target"><input class="accent-blue-500" data-workout-type="背部训练" type="checkbox"/>背部训练</label>
+<label class="bg-gray-50 rounded-lg px-2 py-2 flex items-center gap-2 touch-target"><input class="accent-blue-500" data-workout-type="手臂训练" type="checkbox"/>手臂训练</label>
+<label class="bg-gray-50 rounded-lg px-2 py-2 flex items-center gap-2 touch-target"><input class="accent-blue-500" data-workout-type="有氧训练" type="checkbox"/>有氧训练</label>
+</div>
+</div>
+<div class="flex justify-between items-center border-b pb-2">
+<span class="text-gray-500">主观强度 (RPE)</span>
+<input class="bg-gray-50 text-sm rounded-lg px-2 py-1 w-24 text-right" data-label="主观强度 (RPE)" data-max="10" data-min="1" data-validate="number" id="rpeInput" max="10" min="1" step="0.5" type="number" placeholder="1-10"/>
+</div>
+<div class="flex justify-between items-center border-b pb-2">
+<span class="text-gray-500">训练时长</span>
+<span class="font-semibold" id="elapsedText">00:00</span>
+</div>
+<div class="flex justify-between items-center border-b pb-2">
+<span class="text-gray-500">总容量</span>
+<span class="font-semibold" id="totalVolumeText">0 kg</span>
+</div>
+<div class="flex flex-col">
+<span class="text-gray-500 mb-1">训练备注</span>
+<textarea class="bg-gray-50 p-2 rounded-lg text-sm border-none focus:ring-1 focus:ring-blue-200" id="workoutNoteInput" placeholder="状态如何？是否有疼痛感？" rows="2"></textarea>
+</div>
+</div>
+<!-- Exercise List -->
+<div id="exercise-container"></div>
+<div class="space-y-3">
+<button class="w-full py-3 bg-gray-200 text-gray-700 font-bold rounded-xl flex items-center justify-center gap-2" id="addExerciseBtn" type="button">
+<iconify-icon icon="ion:search-outline"></iconify-icon>
+                    添加动作
+                </button>
+<button class="btn-primary block w-full" id="finishWorkoutBtn" type="button">完成训练</button>
+</div>
+</div>
+<!-- Navigation Tab Bar -->
+<nav class="tab-bar">
+<a class="tab-item" href="./index.html">
+<iconify-icon icon="ion:stats-chart" width="26"></iconify-icon>
+<span>摘要</span>
+</a>
+<a class="tab-item active" href="./workout.html">
+<iconify-icon icon="ion:add-circle" width="26"></iconify-icon>
+<span>训练</span>
+</a>
+<a class="tab-item" href="./history.html">
+<iconify-icon icon="ion:calendar" width="26"></iconify-icon>
+<span>历史</span>
+</a>
+<a class="tab-item" href="./body.html">
+<iconify-icon icon="ion:accessibility" width="26"></iconify-icon>
+<span>身体数据</span>
+</a>
+<a class="tab-item" href="./settings.html">
+<iconify-icon icon="ion:settings" width="26"></iconify-icon>
+<span>设置</span>
+</a>
+</nav>
+</div>
+<script>
+  window.FitLogCommon?.initPage();
+  const WORKOUT_STORAGE_KEY = 'fitlog:workout:draft';
+  const SESSION_STORAGE_KEY = 'fitlog:workout:sessions';
+  const WORKOUT_TYPE_OPTIONS = [
+    '全身训练',
+    '肩部训练',
+    '腹部训练',
+    '腿部训练',
+    '胸部训练',
+    '背部训练',
+    '手臂训练',
+    '有氧训练'
+  ];
+  const EXERCISE_LIBRARY_BY_TYPE = {
+    全身训练: ['杠铃深蹲', '卧推', '硬拉', '引体向上', '哑铃划船', '推举'],
+    胸部训练: ['杠铃卧推', '上斜哑铃卧推', '蝴蝶机夹胸', '绳索夹胸', '双杠臂屈伸'],
+    背部训练: ['硬拉', '高位下拉', '坐姿划船', '杠铃划船', '单臂哑铃划船'],
+    腿部训练: ['杠铃深蹲', '腿举', '罗马尼亚硬拉', '腿屈伸', '腿弯举', '保加利亚分腿蹲'],
+    肩部训练: ['哑铃推举', '杠铃推举', '侧平举', '俯身飞鸟', '面拉'],
+    手臂训练: ['杠铃弯举', '哑铃弯举', '绳索下压', '法式卧推', '锤式弯举'],
+    腹部训练: ['卷腹', '悬垂举腿', '平板支撑', '绳索卷腹', '俄罗斯转体'],
+    有氧训练: ['跑步机跑步', '划船机', '动感单车', '跳绳', '椭圆机']
+  };
+  const EXERCISE_LIBRARY_MUSCLE = {
+    杠铃深蹲: '腿部',
+    卧推: '胸部',
+    硬拉: '背部',
+    引体向上: '背部',
+    哑铃划船: '背部',
+    推举: '肩部',
+    杠铃卧推: '胸部',
+    上斜哑铃卧推: '胸部',
+    蝴蝶机夹胸: '胸部',
+    绳索夹胸: '胸部',
+    双杠臂屈伸: '胸部',
+    高位下拉: '背部',
+    坐姿划船: '背部',
+    杠铃划船: '背部',
+    单臂哑铃划船: '背部',
+    腿举: '腿部',
+    罗马尼亚硬拉: '腿部',
+    腿屈伸: '腿部',
+    腿弯举: '腿部',
+    保加利亚分腿蹲: '腿部',
+    哑铃推举: '肩部',
+    杠铃推举: '肩部',
+    侧平举: '肩部',
+    俯身飞鸟: '肩部',
+    面拉: '肩部',
+    杠铃弯举: '手臂',
+    哑铃弯举: '手臂',
+    绳索下压: '手臂',
+    法式卧推: '手臂',
+    锤式弯举: '手臂',
+    卷腹: '腹部',
+    悬垂举腿: '腹部',
+    平板支撑: '腹部',
+    绳索卷腹: '腹部',
+    俄罗斯转体: '腹部',
+    跑步机跑步: '有氧',
+    划船机: '有氧',
+    动感单车: '有氧',
+    跳绳: '有氧',
+    椭圆机: '有氧'
+  };
+
+  function toEstimated8RmKg(weightKg, reps) {
+    const w = Number(weightKg) || 0;
+    const r = Number(reps) || 0;
+    if (w <= 0 || r <= 0) return 0;
+    // Epley: 1RM = W * (1 + reps/30), then convert to 8RM.
+    return w * (1 + r / 30) / (1 + 8 / 30);
+  }
+
+  function normalizeWorkoutTypes(input) {
+    if (!input) return ['全身训练'];
+    if (Array.isArray(input)) {
+      const picked = input.filter((item) => WORKOUT_TYPE_OPTIONS.includes(item));
+      return picked.length ? picked : ['全身训练'];
+    }
+    if (typeof input === 'string') {
+      const split = input
+        .split(/[、,/|+]/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .map((item) => (item.endsWith('训练') ? item : `${item}训练`));
+      const picked = split.filter((item) => WORKOUT_TYPE_OPTIONS.includes(item));
+      return picked.length ? picked : ['全身训练'];
+    }
+    return ['全身训练'];
+  }
+
+  function buildExerciseCandidates(selectedTypes) {
+    const picked = normalizeWorkoutTypes(selectedTypes);
+    const all = picked.flatMap((type) => EXERCISE_LIBRARY_BY_TYPE[type] || []);
+    return Array.from(new Set(all));
+  }
+
+  const defaultDraft = {
+    startAt: Date.now(),
+    startTime: new Date().toLocaleString('zh-CN', { hour12: false }),
+    note: '',
+    rpe: null,
+    workoutType: '全身训练',
+    workoutTypes: ['全身训练'],
+    weightUnit: 'kg',
+    exercises: [
+      {
+        id: crypto.randomUUID(),
+        name: '杠铃深蹲',
+        muscleGroup: '腿部',
+        sets: [
+          { weightKg: 100, reps: 8, restSec: 90, completed: true },
+          { weightKg: 100, reps: 8, restSec: 90, completed: false }
+        ]
+      }
+    ]
+  };
+
+  const createDraftFromTemplate = (templateName) => {
+    const base = {
+      ...structuredClone(defaultDraft),
+      startAt: Date.now(),
+      startTime: new Date().toLocaleString('zh-CN', { hour12: false })
+    };
+
+    if (templateName === 'push-pull-legs') {
+      base.workoutTypes = ['胸部训练', '背部训练', '腿部训练'];
+      base.workoutType = base.workoutTypes.join('、');
+      base.exercises = [
+        {
+          id: crypto.randomUUID(),
+          name: '卧推',
+          muscleGroup: '胸部',
+          sets: [
+            { weightKg: 70, reps: 8, restSec: 120, completed: false },
+            { weightKg: 70, reps: 8, restSec: 120, completed: false }
+          ]
+        },
+        {
+          id: crypto.randomUUID(),
+          name: '杠铃划船',
+          muscleGroup: '背部',
+          sets: [{ weightKg: 60, reps: 10, restSec: 90, completed: false }]
+        }
+      ];
+    }
+
+    if (templateName === 'blank') {
+      base.workoutTypes = ['全身训练'];
+      base.workoutType = '全身训练';
+      base.exercises = [
+        {
+          id: crypto.randomUUID(),
+          name: '新动作',
+          muscleGroup: '未分类',
+          sets: [{ weightKg: 0, reps: 10, restSec: 60, completed: false }]
+        }
+      ];
+    }
+
+    return base;
+  };
+
+  function readDraft() {
+    try {
+      const raw = localStorage.getItem(WORKOUT_STORAGE_KEY);
+      if (!raw) return structuredClone(defaultDraft);
+      const parsed = JSON.parse(raw);
+      const nextTypes = normalizeWorkoutTypes(parsed.workoutTypes || parsed.workoutType);
+      return {
+        ...structuredClone(defaultDraft),
+        ...parsed,
+        workoutTypes: nextTypes,
+        workoutType: nextTypes.join('、'),
+        exercises: Array.isArray(parsed.exercises) ? parsed.exercises : structuredClone(defaultDraft.exercises)
+      };
+    } catch {
+      return structuredClone(defaultDraft);
+    }
+  }
+
+  function saveDraft() {
+    localStorage.setItem(WORKOUT_STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function kgToLb(kg) {
+    return kg * 2.2046226218;
+  }
+
+  function lbToKg(lb) {
+    return lb / 2.2046226218;
+  }
+
+  function formatWeightForDisplay(weightKg, unit) {
+    const nextUnit = unit || 'kg';
+    if (nextUnit === 'lb') return Math.round(kgToLb(weightKg || 0) * 10) / 10;
+    return Math.round((weightKg || 0) * 10) / 10;
+  }
+
+  // 输入单位与状态无关：所有内存存储都用 kg（weightKg）。
+  function parseWeightFromInput(inputValue, unit) {
+    const numeric = Number(inputValue) || 0;
+    const nextUnit = unit || 'kg';
+    return nextUnit === 'lb' ? lbToKg(numeric) : numeric;
+  }
+
+  function formatElapsed(seconds) {
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  }
+
+  function getWorkoutDurationSeconds() {
+    return Math.max(0, Math.floor((Date.now() - Number(state.startAt || Date.now())) / 1000));
+  }
+
+  function getTotalVolumeKg() {
+    return state.exercises.reduce(
+      (sum, ex) => sum + ex.sets.reduce((setSum, setItem) => setSum + (setItem.weightKg || 0) * (setItem.reps || 0), 0),
+      0
+    );
+  }
+
+  function updateRealtimeStats() {
+    const elapsedText = document.getElementById('elapsedText');
+    const totalVolumeText = document.getElementById('totalVolumeText');
+    const duration = getWorkoutDurationSeconds();
+    const volumeKg = getTotalVolumeKg();
+    const displayUnit = state.displayWeightUnit || state.weightUnit || 'kg';
+    const displayVolume =
+      displayUnit === 'lb'
+        ? Math.round(kgToLb(volumeKg) * 10) / 10
+        : Math.round(volumeKg * 10) / 10;
+
+    elapsedText.textContent = formatElapsed(duration);
+    totalVolumeText.textContent = `${Number(displayVolume).toLocaleString()} ${displayUnit}`;
+  }
+
+  function renderExercises() {
+    const container = document.getElementById('exercise-container');
+    container.innerHTML = state.exercises
+      .map(
+        (exercise, exerciseIndex) => `
+          <div class="card" data-exercise-id="${exercise.id}">
+            <div class="flex items-center justify-between mb-4 gap-2">
+              <input class="font-bold text-lg border-none p-0 focus:ring-0 flex-1" type="text" value="${exercise.name}" data-action="rename" data-exercise-index="${exerciseIndex}"/>
+              <div class="flex items-center gap-2">
+                <select
+                  class="bg-gray-50 text-xs rounded-lg px-2 py-1 touch-target"
+                  data-action="set-exercise-weight-unit"
+                  data-exercise-index="${exerciseIndex}"
+                >
+                  <option value="kg" ${((exercise.weightUnit || state.displayWeightUnit || state.weightUnit || 'kg') === 'kg') ? 'selected' : ''}>kg</option>
+                  <option value="lb" ${((exercise.weightUnit || state.displayWeightUnit || state.weightUnit || 'kg') === 'lb') ? 'selected' : ''}>lb</option>
+                </select>
+                <button
+                  class="w-9 h-9 rounded-lg bg-gray-50 text-red-500 flex items-center justify-center touch-target active:scale-[0.98]"
+                  data-action="remove-exercise"
+                  data-exercise-index="${exerciseIndex}"
+                  type="button"
+                  aria-label="移除动作"
+                  title="移除"
+                >
+                  <iconify-icon icon="ion:trash-outline" width="18"></iconify-icon>
+                </button>
+              </div>
+            </div>
+            <table class="w-full text-left text-sm">
+              <thead class="text-gray-400">
+                <tr>
+                  <th class="font-normal py-2">组数</th>
+                  <th class="font-normal py-2">重量(${exercise.weightUnit || state.displayWeightUnit || state.weightUnit || 'kg'})</th>
+                  <th class="font-normal py-2">次数</th>
+                  <th class="font-normal py-2">休息(s)</th>
+                  <th class="py-2"><iconify-icon icon="ion:checkmark-done"></iconify-icon></th>
+                </tr>
+              </thead>
+              <tbody>
+                ${exercise.sets
+                  .map(
+                    (setItem, setIndex) => `
+                      <tr class="border-t">
+                        <td class="py-2">${setIndex + 1}</td>
+                        <td class="py-2"><input class="input-mini" data-action="set-weight" data-exercise-index="${exerciseIndex}" data-set-index="${setIndex}" type="number" value="${formatWeightForDisplay(setItem.weightKg, exercise.weightUnit || state.displayWeightUnit || state.weightUnit || 'kg')}"/></td>
+                        <td class="py-2"><input class="input-mini" data-action="set-reps" data-exercise-index="${exerciseIndex}" data-set-index="${setIndex}" type="number" value="${setItem.reps}"/></td>
+                        <td class="py-2"><input class="input-mini" data-action="set-rest" data-exercise-index="${exerciseIndex}" data-set-index="${setIndex}" type="number" value="${setItem.restSec || 60}"/></td>
+                        <td class="py-2"><input class="accent-green-500 w-4 h-4" data-action="toggle-completed" data-exercise-index="${exerciseIndex}" data-set-index="${setIndex}" type="checkbox" ${setItem.completed ? 'checked' : ''}/></td>
+                      </tr>
+                    `
+                  )
+                  .join('')}
+              </tbody>
+            </table>
+            <button class="w-full py-2 mt-2 bg-gray-50 text-blue-500 text-sm font-semibold rounded-lg" data-action="add-set" data-exercise-index="${exerciseIndex}" type="button">+ 添加组数</button>
+          </div>
+        `
+      )
+      .join('');
+
+    bindExerciseEvents();
+    updateRealtimeStats();
+  }
+
+  function bindExerciseEvents() {
+    document.querySelectorAll('[data-action="rename"]').forEach((input) => {
+      input.addEventListener('change', (event) => {
+        const exerciseIndex = Number(event.target.dataset.exerciseIndex);
+        state.exercises[exerciseIndex].name = event.target.value.trim() || '未命名动作';
+        saveDraft();
+      });
+    });
+
+    document.querySelectorAll('[data-action="remove-exercise"]').forEach((button) => {
+      button.addEventListener('click', (event) => {
+        const exerciseIndex = Number(event.currentTarget.dataset.exerciseIndex);
+        if (!Number.isFinite(exerciseIndex)) return;
+        state.exercises.splice(exerciseIndex, 1);
+        saveDraft();
+        renderExercises();
+      });
+    });
+
+    document.querySelectorAll('[data-action="add-set"]').forEach((button) => {
+      button.addEventListener('click', (event) => {
+        const exerciseIndex = Number(event.target.dataset.exerciseIndex);
+        state.exercises[exerciseIndex].sets.push({ weightKg: 0, reps: 10, restSec: 60, completed: false });
+        saveDraft();
+        renderExercises();
+      });
+    });
+
+    document.querySelectorAll('[data-action="set-weight"]').forEach((input) => {
+      input.addEventListener('change', (event) => {
+        const exerciseIndex = Number(event.target.dataset.exerciseIndex);
+        const setIndex = Number(event.target.dataset.setIndex);
+        const exerciseUnit = state.exercises[exerciseIndex]?.weightUnit || state.displayWeightUnit || state.weightUnit || 'kg';
+        state.exercises[exerciseIndex].sets[setIndex].weightKg = parseWeightFromInput(event.target.value, exerciseUnit);
+        saveDraft();
+        updateRealtimeStats();
+      });
+    });
+
+    document.querySelectorAll('[data-action="set-reps"]').forEach((input) => {
+      input.addEventListener('change', (event) => {
+        const exerciseIndex = Number(event.target.dataset.exerciseIndex);
+        const setIndex = Number(event.target.dataset.setIndex);
+        state.exercises[exerciseIndex].sets[setIndex].reps = Number(event.target.value) || 0;
+        saveDraft();
+        updateRealtimeStats();
+      });
+    });
+
+    document.querySelectorAll('[data-action="set-rest"]').forEach((input) => {
+      input.addEventListener('change', (event) => {
+        const exerciseIndex = Number(event.target.dataset.exerciseIndex);
+        const setIndex = Number(event.target.dataset.setIndex);
+        state.exercises[exerciseIndex].sets[setIndex].restSec = Number(event.target.value) || 0;
+        saveDraft();
+      });
+    });
+
+    document.querySelectorAll('[data-action="toggle-completed"]').forEach((checkbox) => {
+      checkbox.addEventListener('change', (event) => {
+        const exerciseIndex = Number(event.target.dataset.exerciseIndex);
+        const setIndex = Number(event.target.dataset.setIndex);
+        state.exercises[exerciseIndex].sets[setIndex].completed = event.target.checked;
+        saveDraft();
+      });
+    });
+
+    document.querySelectorAll('[data-action="set-exercise-weight-unit"]').forEach((select) => {
+      select.addEventListener('change', (event) => {
+        const exerciseIndex = Number(event.target.dataset.exerciseIndex);
+        const nextUnit = event.target.value === 'lb' ? 'lb' : 'kg';
+        if (!state.exercises[exerciseIndex]) return;
+        state.exercises[exerciseIndex].weightUnit = nextUnit;
+        saveDraft();
+        renderExercises();
+        updateRealtimeStats();
+      });
+    });
+  }
+
+  const noteInput = document.getElementById('workoutNoteInput');
+  const startTimeEl = document.querySelector('.card .text-blue-500');
+  const workoutTypePickerBtn = document.getElementById('workoutTypePickerBtn');
+  const workoutTypePanel = document.getElementById('workoutTypePanel');
+  const rpeInput = document.getElementById('rpeInput');
+  const addExerciseBtn = document.getElementById('addExerciseBtn');
+  const finishWorkoutBtn = document.getElementById('finishWorkoutBtn');
+  const timerLink = document.getElementById('timerLink');
+
+  let state = readDraft();
+  const settings = JSON.parse(localStorage.getItem('fitlog:settings') || '{}');
+  const preferredUnit = settings.weightUnit || 'kg';
+  // 训练总量的展示单位（不再作为全局输入项）。
+  state.displayWeightUnit = state.displayWeightUnit || preferredUnit;
+
+  // 兼容旧草稿：如果旧草稿里只有全局 weightUnit，就把它用作每个动作的默认单位。
+  if (!state.weightUnit) state.weightUnit = preferredUnit;
+  if (Array.isArray(state.exercises)) {
+    state.exercises = state.exercises.map((ex) => ({
+      ...ex,
+      weightUnit: ex.weightUnit || state.displayWeightUnit || state.weightUnit || preferredUnit
+    }));
+  }
+  state.workoutTypes = normalizeWorkoutTypes(state.workoutTypes || state.workoutType);
+  state.workoutType = state.workoutTypes.join('、');
+
+  let needStartConfirm = false;
+  if (!localStorage.getItem(WORKOUT_STORAGE_KEY)) {
+    const params = new URLSearchParams(window.location.search);
+    const template = params.get('template');
+    const initialTemplate = template === 'push-pull-legs' ? 'push-pull-legs' : 'blank';
+    state = createDraftFromTemplate(initialTemplate);
+    state.weightUnit = preferredUnit;
+    // 只有点击“开始”后才真正保存草稿，取消则返回首页。
+    needStartConfirm = true;
+  }
+
+  startTimeEl.textContent = state.startTime;
+  noteInput.value = state.note || '';
+  workoutTypePickerBtn.textContent = state.workoutType || '全身训练';
+  rpeInput.value = state.rpe ?? '';
+
+  function renderWorkoutTypePicker() {
+    const selectedTypes = normalizeWorkoutTypes(state.workoutTypes);
+    state.workoutTypes = selectedTypes;
+    state.workoutType = selectedTypes.join('、');
+    workoutTypePickerBtn.textContent = state.workoutType;
+    workoutTypePanel.querySelectorAll('[data-workout-type]').forEach((checkbox) => {
+      checkbox.checked = selectedTypes.includes(checkbox.dataset.workoutType);
+    });
+  }
+
+  renderWorkoutTypePicker();
+
+  function showStartTrainingModal() {
+    const phoneContainer = document.querySelector('.phone-container');
+    if (!phoneContainer) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'fitlog-start-training-modal';
+    overlay.className =
+      'absolute inset-0 z-[100000] bg-black/45 flex items-center justify-center p-4';
+    overlay.innerHTML = `
+      <div class="w-full max-w-[320px] bg-white rounded-2xl p-4 shadow-lg touch-manipulation">
+        <div class="text-center">
+          <h3 class="text-lg font-bold text-gray-900">开始训练？</h3>
+          <p class="text-sm text-gray-500 mt-1">开始后进入训练记录</p>
+        </div>
+        <div class="mt-4 flex gap-3">
+          <button type="button" class="w-1/2 py-3 rounded-xl bg-gray-100 text-gray-700 font-semibold touch-target" id="fitlog-start-cancel-btn">
+            取消
+          </button>
+          <button type="button" class="w-1/2 py-3 rounded-xl btn-primary font-semibold touch-target" id="fitlog-start-confirm-btn">
+            开始
+          </button>
+        </div>
+      </div>
+    `;
+
+    // iOS 上禁止背景滚动，避免体验卡顿
+    overlay.addEventListener(
+      'touchmove',
+      (e) => e.preventDefault(),
+      { passive: false }
+    );
+
+    phoneContainer.appendChild(overlay);
+
+    const cleanup = () => overlay.remove();
+    const cancelBtn = document.getElementById('fitlog-start-cancel-btn');
+    const confirmBtn = document.getElementById('fitlog-start-confirm-btn');
+
+    cancelBtn?.addEventListener('click', () => {
+      cleanup();
+      window.location.href = './index.html';
+    });
+
+    confirmBtn?.addEventListener('click', () => {
+      // 点击“开始”才落盘草稿
+      saveDraft();
+      cleanup();
+      window.FitLogCommon?.showToast?.('训练已开始', 'success');
+    });
+  }
+
+  if (needStartConfirm) {
+    showStartTrainingModal();
+  }
+
+  noteInput.addEventListener('change', (event) => {
+    state.note = event.target.value;
+    saveDraft();
+  });
+
+  workoutTypePickerBtn.addEventListener('click', () => {
+    workoutTypePanel.classList.toggle('hidden');
+  });
+
+  workoutTypePanel.querySelectorAll('[data-workout-type]').forEach((checkbox) => {
+    checkbox.addEventListener('change', (event) => {
+      const selected = Array.from(workoutTypePanel.querySelectorAll('[data-workout-type]:checked')).map(
+        (node) => node.dataset.workoutType
+      );
+      if (!selected.length) {
+        event.target.checked = true;
+        window.FitLogCommon.showToast('至少选择一个训练类型', 'error');
+        return;
+      }
+      state.workoutTypes = selected;
+      state.workoutType = selected.join('、');
+      renderWorkoutTypePicker();
+      saveDraft();
+    });
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!workoutTypePanel.contains(event.target) && !workoutTypePickerBtn.contains(event.target)) {
+      workoutTypePanel.classList.add('hidden');
+    }
+  });
+
+  rpeInput.addEventListener('change', (event) => {
+    const value = Number(event.target.value);
+    state.rpe = value >= 1 && value <= 10 ? value : null;
+    event.target.value = state.rpe ?? '';
+    saveDraft();
+  });
+
+  addExerciseBtn.addEventListener('click', showAddExerciseModal);
+
+  timerLink.addEventListener('click', (event) => {
+    event.preventDefault();
+    const nextRestSec = state.exercises.flatMap((ex) => ex.sets).find((set) => !set.completed)?.restSec || 60;
+    window.location.href = `./timer.html?rest=${nextRestSec}&autostart=1`;
+  });
+
+  function showAddExerciseModal() {
+    const phoneContainer = document.querySelector('.phone-container');
+    if (!phoneContainer) return;
+    const typeOptions = WORKOUT_TYPE_OPTIONS.filter((type) => type !== '全身训练');
+    const defaultType = normalizeWorkoutTypes(state.workoutTypes)[0] || '胸部训练';
+    let selectedType = typeOptions.includes(defaultType) ? defaultType : typeOptions[0];
+    let selectedAction = '';
+    const overlay = document.createElement('div');
+    overlay.className = 'absolute inset-0 z-[100000] bg-black/40 flex items-center justify-center p-4';
+    overlay.innerHTML = `
+      <div class="w-full max-w-[340px] bg-white rounded-2xl p-4 shadow-lg">
+        <h3 class="text-lg font-bold">添加动作</h3>
+        <p class="text-xs text-gray-500 mt-1">先选训练类型，再选具体动作（列表可滑动）</p>
+        <div class="mt-3">
+          <div class="text-xs text-gray-500 mb-2">训练类型</div>
+          <div id="exerciseTypeTabs" class="flex gap-2 overflow-x-auto pb-1">
+            ${typeOptions
+              .map(
+                (type) => `
+                  <button
+                    type="button"
+                    data-action="pick-type"
+                    data-type="${type}"
+                    class="shrink-0 px-3 py-1.5 rounded-full text-xs bg-gray-100 text-gray-600 touch-target"
+                  >
+                    ${type}
+                  </button>
+                `
+              )
+              .join('')}
+          </div>
+        </div>
+        <div class="mt-3">
+          <div class="text-xs text-gray-500 mb-2">动作列表</div>
+          <div id="exerciseActionList" class="max-h-36 overflow-y-auto bg-gray-50 rounded-xl p-2 space-y-1"></div>
+        </div>
+        <input id="exerciseCustomInput" class="input-base mt-2 text-sm" placeholder="自定义动作名称（可选）" />
+        <div class="mt-4 flex gap-2">
+          <button id="exerciseModalCancel" type="button" class="w-1/2 py-2 rounded-xl bg-gray-100 text-gray-700">取消</button>
+          <button id="exerciseModalConfirm" type="button" class="w-1/2 py-2 rounded-xl btn-primary">添加</button>
+        </div>
+      </div>
+    `;
+    phoneContainer.appendChild(overlay);
+
+    const cleanup = () => overlay.remove();
+    const actionList = overlay.querySelector('#exerciseActionList');
+    const typeButtons = Array.from(overlay.querySelectorAll('[data-action="pick-type"]'));
+
+    function renderActionList() {
+      const actions = EXERCISE_LIBRARY_BY_TYPE[selectedType] || [];
+      if (!actions.length) {
+        actionList.innerHTML = '<div class="text-xs text-gray-400 py-2 text-center">暂无动作</div>';
+        return;
+      }
+      actionList.innerHTML = actions
+        .map(
+          (name) => `
+            <button
+              type="button"
+              data-action="pick-exercise"
+              data-name="${name}"
+              class="w-full text-left px-3 py-2 rounded-lg text-sm ${
+                selectedAction === name ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'
+              }"
+            >
+              ${name}
+            </button>
+          `
+        )
+        .join('');
+      actionList.querySelectorAll('[data-action="pick-exercise"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          selectedAction = btn.dataset.name || '';
+          renderActionList();
+        });
+      });
+    }
+
+    function renderTypeButtons() {
+      typeButtons.forEach((btn) => {
+        const active = btn.dataset.type === selectedType;
+        btn.classList.toggle('bg-blue-500', active);
+        btn.classList.toggle('text-white', active);
+        btn.classList.toggle('bg-gray-100', !active);
+        btn.classList.toggle('text-gray-600', !active);
+      });
+      selectedAction = '';
+      renderActionList();
+    }
+
+    typeButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectedType = btn.dataset.type || selectedType;
+        renderTypeButtons();
+      });
+    });
+
+    renderTypeButtons();
+
+    overlay.querySelector('#exerciseModalCancel')?.addEventListener('click', cleanup);
+    overlay.querySelector('#exerciseModalConfirm')?.addEventListener('click', () => {
+      const custom = overlay.querySelector('#exerciseCustomInput')?.value?.trim() || '';
+      const name = custom || selectedAction;
+      if (!name) {
+        window.FitLogCommon.showToast('请选择或输入动作名称', 'error');
+        return;
+      }
+      const muscleGroup = EXERCISE_LIBRARY_MUSCLE[name] || '未分类';
+      state.exercises.push({
+        id: crypto.randomUUID(),
+        name,
+        muscleGroup,
+        weightUnit: state.displayWeightUnit || state.weightUnit || preferredUnit || 'kg',
+        sets: [{ weightKg: 0, reps: 10, restSec: 60, completed: false }]
+      });
+      saveDraft();
+      renderExercises();
+      cleanup();
+    });
+  }
+
+  finishWorkoutBtn.addEventListener('click', () => {
+    const sessions = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '[]');
+    const totalVolumeKg = getTotalVolumeKg();
+    const displayUnit = state.displayWeightUnit || state.weightUnit || 'kg';
+    const totalVolumeDisplay =
+      displayUnit === 'lb'
+        ? Math.round(kgToLb(totalVolumeKg) * 10) / 10
+        : Math.round(totalVolumeKg * 10) / 10;
+    const durationMin = Math.max(1, Math.round(getWorkoutDurationSeconds() / 60));
+    const completedCount = state.exercises.flatMap((exercise) => exercise.sets).filter((set) => set.completed).length;
+
+    const best8Rm = state.exercises
+      .flatMap((exercise) => (exercise.sets || []).map((setItem) => toEstimated8RmKg(setItem.weightKg, setItem.reps)))
+      .reduce((max, val) => Math.max(max, val), 0);
+
+    const completedSession = {
+      id: `session-${Date.now()}`,
+      date: new Date().toISOString().slice(0, 10),
+      startedAt: new Date(Number(state.startAt || Date.now())).toISOString(),
+      finishedAt: new Date().toISOString(),
+      workoutType: state.workoutType || '训练记录',
+      workoutTypes: normalizeWorkoutTypes(state.workoutTypes),
+      durationMin,
+      totalVolumeKg,
+      totalVolumeDisplay,
+      weightUnit: displayUnit,
+      oneRm: Math.max(0, Math.round(totalVolumeKg / 100)),
+      eightRm: Math.max(0, Math.round(best8Rm * 10) / 10),
+      note: state.note,
+      rpe: state.rpe,
+      completedSetCount: completedCount,
+      exercises: state.exercises
+    };
+
+    sessions.push(completedSession);
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
+    localStorage.removeItem(WORKOUT_STORAGE_KEY);
+    window.FitLogCommon.showToast('训练已保存', 'success');
+    setTimeout(() => {
+      window.location.href = './history.html';
+    }, 400);
+  });
+
+  renderExercises();
+  updateRealtimeStats();
+  setInterval(updateRealtimeStats, 1000);
+</script>
+</body>
+</html>

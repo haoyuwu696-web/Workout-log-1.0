@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FitLog Pro - 身体数据</title>
+<link rel="stylesheet" href="../styles/pages/body.css"/>
+<link rel="stylesheet" href="../styles/output.css"/>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/echarts.min.5.4.3.js"></script>
+<script src="../scripts/core/seed-data.js"></script>
+<script src="../scripts/core/app-common.js"></script>
+</head>
+<body>
+<div class="phone-container">
+<div class="status-bar">
+<span>09:41</span>
+<div class="flex gap-1">
+<iconify-icon icon="ion:cellular"></iconify-icon>
+<iconify-icon icon="ion:wifi"></iconify-icon>
+<iconify-icon icon="ion:battery-full"></iconify-icon>
+</div>
+</div>
+<div class="content-area">
+<header class="py-6 flex justify-between items-center">
+<h1 class="text-3xl font-bold">身体数据</h1>
+<button class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center" id="toggleBodyFormBtn" type="button">
+<iconify-icon icon="ion:add" width="20"></iconify-icon>
+</button>
+</header>
+<!-- Main Stats -->
+<div class="grid grid-cols-2 gap-3 mb-6">
+<div class="card flex flex-col items-center py-6">
+<span class="text-xs text-gray-500 mb-1">当前体重</span>
+<span class="text-2xl font-bold"><span id="currentWeightValue">77.5</span> <small class="text-sm font-normal" id="weightUnitText">kg</small></span>
+<span class="text-[10px] mt-1 font-semibold" id="weightDeltaText">0kg 较上次</span>
+</div>
+<div class="card flex flex-col items-center py-6">
+<span class="text-xs text-gray-500 mb-1">体脂率</span>
+<span class="text-2xl font-bold"><span id="bodyFatValue">14.2</span> <small class="text-sm font-normal">%</small></span>
+<span class="text-[10px] text-blue-500 mt-1 font-semibold" id="bodyFatHint">健康范围</span>
+</div>
+<div class="card flex flex-col items-center py-6">
+<span class="text-xs text-gray-500 mb-1">当前 BMR</span>
+<span class="text-2xl font-bold"><span id="bmrValue">--</span> <small class="text-sm font-normal">kcal</small></span>
+<span class="text-[10px] text-gray-500 mt-1 font-semibold">基础代谢</span>
+</div>
+<div class="card flex flex-col items-center py-6">
+<span class="text-xs text-gray-500 mb-1">估算 TDEE</span>
+<span class="text-2xl font-bold"><span id="tdeeValue">--</span> <small class="text-sm font-normal">kcal</small></span>
+<span class="text-[10px] text-gray-500 mt-1 font-semibold" id="tdeeHint">活动系数 1.375</span>
+</div>
+</div>
+
+<!-- New Body Record Form -->
+<div class="card hidden" id="bodyFormCard">
+<h3 class="font-bold mb-3">新增身体记录</h3>
+<div class="grid grid-cols-2 gap-2 text-sm mb-2">
+<input class="bg-gray-100 rounded p-2" data-label="体重" data-max="300" data-min="20" data-required="true" data-unit="kg" data-validate="number" id="inputWeight" placeholder="体重 kg" step="0.1" type="number"/>
+<input class="bg-gray-100 rounded p-2" data-label="体脂率" data-max="60" data-min="3" data-unit="%" data-validate="number" id="inputBodyFat" placeholder="体脂 %" step="0.1" type="number"/>
+<select class="bg-gray-100 rounded p-2" data-label="性别" id="inputGender">
+<option value="male">男</option>
+<option value="female">女</option>
+</select>
+<input class="bg-gray-100 rounded p-2" data-label="身高" data-max="250" data-min="120" data-required="true" data-unit="cm" data-validate="number" id="inputHeight" placeholder="身高 cm" step="0.1" type="number"/>
+<input class="bg-gray-100 rounded p-2" data-label="年龄" data-max="100" data-min="10" data-required="true" data-unit="岁" data-validate="number" id="inputAge" placeholder="年龄" step="1" type="number"/>
+<input class="bg-gray-100 rounded p-2" data-label="胸围" data-max="250" data-min="40" data-unit="cm" data-validate="number" id="inputChest" placeholder="胸围 cm" step="0.1" type="number"/>
+<input class="bg-gray-100 rounded p-2" data-label="腰围" data-max="200" data-min="40" data-unit="cm" data-validate="number" id="inputWaist" placeholder="腰围 cm" step="0.1" type="number"/>
+<input class="bg-gray-100 rounded p-2" data-label="臀围" data-max="200" data-min="40" data-unit="cm" data-validate="number" id="inputHips" placeholder="臀围 cm" step="0.1" type="number"/>
+<input class="bg-gray-100 rounded p-2" data-label="静息心率" data-max="220" data-min="30" data-validate="number" id="inputHeart" placeholder="静息心率" type="number"/>
+</div>
+<p class="text-xs text-gray-600 mb-2" id="bmrPreviewText">BMR 预估：请输入体重、身高、年龄（kcal/天）</p>
+<button class="w-full bg-blue-500 text-white rounded-lg py-2 font-semibold" id="saveBodyRecordBtn" type="button">保存记录</button>
+</div>
+
+<!-- Body Trend -->
+<div class="card">
+<div class="flex items-center justify-between mb-3">
+<h3 class="font-bold">体重趋势</h3>
+<select class="text-xs bg-gray-100 border-none rounded p-1 focus:ring-0" id="bodyTrendRange">
+<option value="week">近7天</option>
+<option value="month">近30天</option>
+</select>
+</div>
+<div id="bodyTrendChart" style="width: 100%; height: 180px;"></div>
+</div>
+<div class="card mt-3">
+<h3 class="font-bold mb-2">目标区间提示</h3>
+<p class="text-sm text-gray-600" id="goalRangeHint">体脂目标范围：12% - 18%</p>
+</div>
+
+<!-- Circumferences -->
+<div class="card">
+<h3 class="font-bold mb-4">围度详细记录 (cm)</h3>
+<div class="space-y-4">
+<div class="flex justify-between items-center text-sm border-b pb-2">
+<span class="text-gray-600">胸围</span>
+<span class="font-semibold"><span id="circ-chest">--</span> <span class="text-xs ml-1 text-gray-400" id="circ-chest-delta">--</span></span>
+</div>
+<div class="flex justify-between items-center text-sm border-b pb-2">
+<span class="text-gray-600">腰围</span>
+<span class="font-semibold"><span id="circ-waist">--</span> <span class="text-xs ml-1 text-gray-400" id="circ-waist-delta">--</span></span>
+</div>
+<div class="flex justify-between items-center text-sm border-b pb-2">
+<span class="text-gray-600">臀围</span>
+<span class="font-semibold"><span id="circ-hips">--</span> <span class="text-xs ml-1 text-gray-400" id="circ-hips-delta">--</span></span>
+</div>
+</div>
+<p class="text-xs text-gray-400 mt-3 hidden" id="circEmptyHint">暂无围度记录，请先在上方录入胸围/腰围/臀围。</p>
+</div>
+<!-- Comparison Photos -->
+<div class="mt-4">
+<h3 class="font-bold mb-3 px-1">对比图</h3>
+<div class="grid grid-cols-2 gap-2">
+<div class="card p-0 overflow-hidden relative group">
+<img alt="Body front view start" class="w-full aspect-[3/4] object-cover" src="https://modao.cc/agent-py/media/generated_images/2026-03-27/da604725c3d044d7adcd25bac2107f64.jpg"/>
+<div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] p-2 text-center">2026-01-01</div>
+</div>
+<div class="card p-0 overflow-hidden relative">
+<img alt="Body front view current" class="w-full aspect-[3/4] object-cover" src="https://modao.cc/agent-py/media/generated_images/2026-03-27/831c0024ccbf4facae28f8cec1c0649e.jpg"/>
+<div class="absolute bottom-0 left-0 right-0 bg-blue-500/80 text-white text-[10px] p-2 text-center">2026-03-27</div>
+</div>
+</div>
+<button class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl mt-3 flex items-center justify-center gap-2 text-gray-400 text-sm">
+<iconify-icon icon="ion:camera-outline"></iconify-icon>
+                    上传今日照片
+                </button>
+</div>
+</div>
+<!-- Navigation Tab Bar -->
+<nav class="tab-bar">
+<a class="tab-item" href="./index.html">
+<iconify-icon icon="ion:stats-chart" width="26"></iconify-icon>
+<span>摘要</span>
+</a>
+<a class="tab-item" href="./workout.html">
+<iconify-icon icon="ion:add-circle" width="26"></iconify-icon>
+<span>训练</span>
+</a>
+<a class="tab-item" href="./history.html">
+<iconify-icon icon="ion:calendar" width="26"></iconify-icon>
+<span>历史</span>
+</a>
+<a class="tab-item active" href="./body.html">
+<iconify-icon icon="ion:accessibility" width="26"></iconify-icon>
+<span>身体数据</span>
+</a>
+<a class="tab-item" href="./settings.html">
+<iconify-icon icon="ion:settings" width="26"></iconify-icon>
+<span>设置</span>
+</a>
+</nav>
+</div>
+<script>
+  window.FitLogCommon?.initPage();
+  const seed = window.FITLOG_SEED || {};
+  const storedRecords = JSON.parse(localStorage.getItem('fitlog:body:records') || '[]');
+  const baseRecords = storedRecords.length ? storedRecords : (seed.bodyRecords || []);
+  const records = [...baseRecords].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const settings = JSON.parse(localStorage.getItem('fitlog:settings') || '{}');
+  const profile = JSON.parse(localStorage.getItem('fitlog:profile') || '{}');
+  const preferredUnit = settings.weightUnit || 'kg';
+
+  function kgToLb(kg) {
+    return kg * 2.2046226218;
+  }
+
+  function formatWeight(weightKg) {
+    if (preferredUnit === 'lb') return Math.round(kgToLb(weightKg) * 10) / 10;
+    return Math.round(weightKg * 10) / 10;
+  }
+
+  if (records.length) {
+    const latest = records[0];
+    const prev = records[1] || latest;
+
+    const latestWeight = Number(latest.weightKg || 0);
+    const prevWeight = Number(prev.weightKg || latestWeight);
+    const weightDelta = Math.round((latestWeight - prevWeight) * 10) / 10;
+
+    document.getElementById('currentWeightValue').textContent = formatWeight(latestWeight).toFixed(1);
+    document.getElementById('weightUnitText').textContent = preferredUnit;
+    const weightDeltaText = document.getElementById('weightDeltaText');
+    const deltaText = preferredUnit === 'lb' ? Math.round(kgToLb(Math.abs(weightDelta)) * 10) / 10 : Math.abs(weightDelta);
+    if (weightDelta > 0) {
+      weightDeltaText.textContent = `+${deltaText.toFixed(1)}${preferredUnit} 较上次`;
+      weightDeltaText.classList.add('text-red-500');
+    } else if (weightDelta < 0) {
+      weightDeltaText.textContent = `-${deltaText.toFixed(1)}${preferredUnit} 较上次`;
+      weightDeltaText.classList.add('text-green-500');
+    } else {
+      weightDeltaText.textContent = `0${preferredUnit} 较上次`;
+      weightDeltaText.classList.add('text-gray-400');
+    }
+
+    const latestBodyFat = Number(latest.bodyFatPct || 0);
+    document.getElementById('bodyFatValue').textContent = latestBodyFat.toFixed(1);
+
+    const bodyFatHint = document.getElementById('bodyFatHint');
+    if (latestBodyFat >= 12 && latestBodyFat <= 18) {
+      bodyFatHint.textContent = '处于目标区间';
+      bodyFatHint.classList.add('text-blue-500');
+    } else if (latestBodyFat < 12) {
+      bodyFatHint.textContent = '偏低，注意恢复';
+      bodyFatHint.classList.add('text-orange-500');
+    } else {
+      bodyFatHint.textContent = '偏高，建议继续控制';
+      bodyFatHint.classList.add('text-orange-500');
+    }
+
+    const latestCirc = latest.circumferencesCm || {};
+    const prevCirc = prev.circumferencesCm || latestCirc;
+
+    const updateCirc = (key, valueElId, deltaElId) => {
+      const rawCurrent = latestCirc[key];
+      const rawPrevious = prevCirc[key];
+      const hasCurrent = rawCurrent !== undefined && rawCurrent !== null && rawCurrent !== '';
+
+      const valueEl = document.getElementById(valueElId);
+      const deltaEl = document.getElementById(deltaElId);
+      if (!valueEl || !deltaEl) return false;
+
+      deltaEl.classList.remove('text-green-500', 'text-red-500', 'text-gray-400');
+      if (!hasCurrent) {
+        valueEl.textContent = '--';
+        deltaEl.textContent = '--';
+        deltaEl.classList.add('text-gray-400');
+        return false;
+      }
+
+      const current = Number(rawCurrent);
+      if (!Number.isFinite(current)) {
+        valueEl.textContent = '--';
+        deltaEl.textContent = '--';
+        deltaEl.classList.add('text-gray-400');
+        return false;
+      }
+
+      const previous = rawPrevious !== undefined && rawPrevious !== null && rawPrevious !== '' ? Number(rawPrevious) : current;
+      const delta = Number.isFinite(previous) ? Math.round((current - previous) * 10) / 10 : 0;
+      valueEl.textContent = current.toFixed(1);
+      if (delta > 0) {
+        deltaEl.textContent = `+${delta.toFixed(1)}`;
+        deltaEl.classList.add('text-green-500');
+      } else if (delta < 0) {
+        deltaEl.textContent = `${delta.toFixed(1)}`;
+        deltaEl.classList.add('text-red-500');
+      } else {
+        deltaEl.textContent = '0.0';
+        deltaEl.classList.add('text-gray-400');
+      }
+      return true;
+    };
+
+    const hasChest = updateCirc('chest', 'circ-chest', 'circ-chest-delta');
+    const hasWaist = updateCirc('waist', 'circ-waist', 'circ-waist-delta');
+    const hasHips = updateCirc('hips', 'circ-hips', 'circ-hips-delta');
+    const circEmptyHintInBlock = document.getElementById('circEmptyHint');
+    if (circEmptyHintInBlock) {
+      if (!hasChest && !hasWaist && !hasHips) circEmptyHintInBlock.classList.remove('hidden');
+      else circEmptyHintInBlock.classList.add('hidden');
+    }
+  }
+
+  const toggleBodyFormBtn = document.getElementById('toggleBodyFormBtn');
+  const bodyFormCard = document.getElementById('bodyFormCard');
+  const saveBodyRecordBtn = document.getElementById('saveBodyRecordBtn');
+  const bodyTrendRange = document.getElementById('bodyTrendRange');
+  const goalRangeHint = document.getElementById('goalRangeHint');
+  const bmrPreviewText = document.getElementById('bmrPreviewText');
+  const circEmptyHint = document.getElementById('circEmptyHint');
+  if (!records.length && circEmptyHint) circEmptyHint.classList.remove('hidden');
+
+  function computeBmr(weightKg, heightCm, age, gender) {
+    const base = 10 * weightKg + 6.25 * heightCm - 5 * age;
+    return gender === 'female' ? base - 161 : base + 5;
+  }
+
+  function getActivityFactor() {
+    const raw = Number(profile.activityFactor || settings.activityFactor || 1.375);
+    return Number.isFinite(raw) && raw > 0 ? raw : 1.375;
+  }
+
+  function renderMetabolicStats() {
+    const latest = records[0] || {};
+    const weightKg = Number(latest.weightKg || profile.weightKg || profile.currentWeightKg || seed.profile?.currentWeightKg || 70);
+    const heightCm = Number(latest.heightCm || profile.heightCm || 175);
+    const age = Number(latest.age || profile.age || 28);
+    const gender = (latest.gender || profile.gender) === 'female' ? 'female' : 'male';
+    const activityFactor = getActivityFactor();
+
+    if (!weightKg || !heightCm || !age) return;
+
+    const bmr = Math.round(computeBmr(weightKg, heightCm, age, gender));
+    const tdee = Math.round(bmr * activityFactor);
+
+    document.getElementById('bmrValue').textContent = String(bmr);
+    document.getElementById('tdeeValue').textContent = String(tdee);
+    document.getElementById('tdeeHint').textContent = `活动系数 ${activityFactor}`;
+  }
+
+  function updateBmrPreview() {
+    const w = Number(document.getElementById('inputWeight')?.value || 0);
+    const h = Number(document.getElementById('inputHeight')?.value || 0);
+    const age = Number(document.getElementById('inputAge')?.value || 0);
+    const gender = document.getElementById('inputGender')?.value || 'male';
+    if (!w || !h || !age) {
+      bmrPreviewText.textContent = 'BMR 预估：请输入体重、身高、年龄（kcal/天）';
+      return;
+    }
+    const bmr = Math.round(computeBmr(w, h, age, gender));
+    bmrPreviewText.textContent = `BMR 预估：${bmr} kcal/天`;
+  }
+
+  toggleBodyFormBtn.addEventListener('click', () => {
+    bodyFormCard.classList.toggle('hidden');
+  });
+
+  saveBodyRecordBtn.addEventListener('click', () => {
+    const wEl = document.getElementById('inputWeight');
+    const bfEl = document.getElementById('inputBodyFat');
+    const genderEl = document.getElementById('inputGender');
+    const heightEl = document.getElementById('inputHeight');
+    const ageEl = document.getElementById('inputAge');
+    const chestEl = document.getElementById('inputChest');
+    const waistEl = document.getElementById('inputWaist');
+    const hipsEl = document.getElementById('inputHips');
+    const heartEl = document.getElementById('inputHeart');
+
+    const wRes = window.FitLogCommon.validateNumber(wEl.value, {
+      min: 20,
+      max: 300,
+      required: true,
+      label: '体重',
+      unit: 'kg'
+    });
+    if (!wRes.ok) {
+      window.FitLogCommon.setFieldError(wEl, wRes.suggestion ? `${wRes.message}（${wRes.suggestion}）` : wRes.message);
+      window.FitLogCommon.showToast(wRes.message, 'error');
+      return;
+    }
+    window.FitLogCommon.clearFieldError(wEl);
+
+    const heightRes = window.FitLogCommon.validateNumber(heightEl.value, {
+      min: 120,
+      max: 250,
+      required: true,
+      label: '身高',
+      unit: 'cm'
+    });
+    if (!heightRes.ok) {
+      window.FitLogCommon.setFieldError(heightEl, heightRes.suggestion ? `${heightRes.message}（${heightRes.suggestion}）` : heightRes.message);
+      window.FitLogCommon.showToast(heightRes.message, 'error');
+      return;
+    }
+    window.FitLogCommon.clearFieldError(heightEl);
+
+    const ageRes = window.FitLogCommon.validateNumber(ageEl.value, {
+      min: 10,
+      max: 100,
+      required: true,
+      label: '年龄',
+      unit: '岁'
+    });
+    if (!ageRes.ok) {
+      window.FitLogCommon.setFieldError(ageEl, ageRes.suggestion ? `${ageRes.message}（${ageRes.suggestion}）` : ageRes.message);
+      window.FitLogCommon.showToast(ageRes.message, 'error');
+      return;
+    }
+    window.FitLogCommon.clearFieldError(ageEl);
+
+    const gender = genderEl.value === 'female' ? 'female' : 'male';
+    const optionalChecks = [
+      [bfEl, { min: 3, max: 60, label: '体脂率', unit: '%' }],
+      [chestEl, { min: 40, max: 250, label: '胸围', unit: 'cm' }],
+      [waistEl, { min: 40, max: 200, label: '腰围', unit: 'cm' }],
+      [hipsEl, { min: 40, max: 200, label: '臀围', unit: 'cm' }],
+      [heartEl, { min: 30, max: 220, label: '静息心率', unit: '' }]
+    ];
+    for (let i = 0; i < optionalChecks.length; i += 1) {
+      const [el, opts] = optionalChecks[i];
+      const res = window.FitLogCommon.validateNumber(el.value, { ...opts, required: false });
+      if (!res.ok) {
+        window.FitLogCommon.setFieldError(el, res.suggestion ? `${res.message}（${res.suggestion}）` : res.message);
+        window.FitLogCommon.showToast(res.message, 'error');
+        return;
+      }
+      window.FitLogCommon.clearFieldError(el);
+    }
+
+    const weightKg = wRes.value;
+    const heightCm = heightRes.value;
+    const age = Math.round(ageRes.value);
+    const bmrKcal = Math.round(computeBmr(weightKg, heightCm, age, gender));
+    const bodyFatPct = Number(bfEl.value) || 0;
+    const chest = Number(chestEl.value) || 0;
+    const waist = Number(waistEl.value) || 0;
+    const hips = Number(hipsEl.value) || 0;
+    const restingHeartRate = Number(heartEl.value) || 0;
+
+    const newRecord = {
+      date: new Date().toISOString().slice(0, 10),
+      weightKg,
+      gender,
+      heightCm,
+      age,
+      bmrKcal,
+      bodyFatPct,
+      restingHeartRate,
+      circumferencesCm: { chest, waist, hips }
+    };
+
+    const current = JSON.parse(localStorage.getItem('fitlog:body:records') || '[]');
+    current.push(newRecord);
+    localStorage.setItem('fitlog:body:records', JSON.stringify(current));
+    window.FitLogCommon.showToast('身体记录已保存', 'success');
+    window.location.reload();
+  });
+
+  const trendSource = [...records].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const bodyTrendChart = echarts.init(document.getElementById('bodyTrendChart'));
+  const { chartTheme, bindChartResize } = window.FitLogCommon.chart;
+  bindChartResize(bodyTrendChart);
+
+  function buildWeightTrendByDays(days) {
+    const byDate = new Map();
+    trendSource.forEach((r) => {
+      const dateKey = String(r.date || '').slice(0, 10);
+      if (!dateKey) return;
+      byDate.set(dateKey, formatWeight(Number(r.weightKg || 0)));
+    });
+
+    const anchorDate = trendSource.length
+      ? new Date(`${String(trendSource[trendSource.length - 1].date || '').slice(0, 10)}T00:00:00`)
+      : new Date();
+    const points = [];
+    for (let i = days - 1; i >= 0; i -= 1) {
+      const d = new Date(anchorDate);
+      d.setDate(anchorDate.getDate() - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      points.push({
+        label: key.slice(5).replace('-', '/'),
+        value: byDate.has(key) ? byDate.get(key) : null
+      });
+    }
+    return points;
+  }
+
+  function renderBodyTrend() {
+    const limit = bodyTrendRange.value === 'month' ? 30 : 7;
+    const points = buildWeightTrendByDays(limit);
+    const values = points.map((p) => p.value);
+    const nonNullValues = values.filter((v) => typeof v === 'number');
+    const minValue = nonNullValues.length ? Math.min(...nonNullValues) : null;
+    const maxValue = nonNullValues.length ? Math.max(...nonNullValues) : null;
+    const yMin = minValue === null ? 0 : Math.max(0, Math.floor((minValue - 2) * 10) / 10);
+    const yMax = maxValue === null ? 100 : Math.ceil((maxValue + (minValue === maxValue ? 5 : 2)) * 10) / 10;
+
+    bodyTrendChart.setOption({
+      textStyle: chartTheme.textStyle,
+      grid: { ...chartTheme.grid, bottom: 24 },
+      xAxis: {
+        type: 'category',
+        data: points.map((p) => p.label),
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { color: '#8E8E93', fontSize: 10 }
+      },
+      yAxis: {
+        type: 'value',
+        min: yMin,
+        max: yMax,
+        axisLine: { show: false },
+        splitLine: { lineStyle: { type: 'dashed', color: '#E5E5EA' } },
+        axisLabel: { color: '#8E8E93', fontSize: 10 }
+      },
+      series: [{
+        data: values,
+        type: 'line',
+        smooth: true,
+        connectNulls: false,
+        symbol: 'circle',
+        symbolSize: 5,
+        itemStyle: { color: '#007AFF' },
+        lineStyle: { width: 3 }
+      }]
+    });
+  }
+
+  const latestBodyFat = Number(records[0]?.bodyFatPct || 0);
+  goalRangeHint.textContent = latestBodyFat
+    ? `当前体脂 ${latestBodyFat.toFixed(1)}%，建议目标区间 12% - 18%`
+    : '建议体脂目标范围：12% - 18%';
+
+  bodyTrendRange.addEventListener('change', renderBodyTrend);
+  ['inputWeight', 'inputHeight', 'inputAge', 'inputGender'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('input', updateBmrPreview);
+    document.getElementById(id)?.addEventListener('change', updateBmrPreview);
+  });
+  renderMetabolicStats();
+  updateBmrPreview();
+  renderBodyTrend();
+</script>
+</body>
+</html>

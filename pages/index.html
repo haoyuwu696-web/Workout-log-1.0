@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FitLog Pro - 数据看板</title>
+<link rel="stylesheet" href="../styles/pages/index.css"/>
+<link rel="stylesheet" href="../styles/output.css"/>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+<script src="https://modao.cc/agent-py/static/source/js/echarts.min.5.4.3.js"></script>
+<script src="../scripts/core/seed-data.js"></script>
+<script src="../scripts/core/app-common.js"></script>
+</head>
+<body>
+<div class="phone-container">
+<!-- Status Bar -->
+<div class="status-bar">
+<span>09:41</span>
+<div class="flex gap-1">
+<iconify-icon icon="ion:cellular"></iconify-icon>
+<iconify-icon icon="ion:wifi"></iconify-icon>
+<iconify-icon icon="ion:battery-full"></iconify-icon>
+</div>
+</div>
+<div class="content-area">
+<header class="py-6">
+<h1 class="text-3xl font-bold text-gray-900 motivation-title" id="motivationTitle">今天多一组，明天更轻松。</h1>
+</header>
+<!-- Ring Stats -->
+<div class="card flex justify-between items-center">
+<div>
+<h3 class="text-lg font-bold">今日状态</h3>
+<p class="text-sm text-gray-500" id="statusSummary">还差 0 kcal 达标</p>
+<div class="mt-2">
+<a class="text-blue-500 text-xs font-semibold" href="./calories.html">消耗估算</a>
+</div>
+<div class="mt-4 space-y-2">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-red-500"></span>
+<span class="text-xs font-semibold" id="activitySummary">活动 0/0 kcal</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-green-400"></span>
+<span class="text-xs font-semibold" id="workoutSummary">锻炼 0/0 min</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-orange-400"></span>
+<span class="text-xs font-semibold text-orange-500" id="activityOverSummary">超额 +0 kcal（0.0x）</span>
+</div>
+</div>
+</div>
+<div class="w-24 h-24 relative flex items-center justify-center">
+<svg class="w-full h-full transform -rotate-90">
+<circle cx="48" cy="48" fill="transparent" r="44" stroke="#FFF7ED" stroke-width="4"></circle>
+<circle cx="48" cy="48" fill="transparent" id="activityRingOverflow" r="44" stroke="#FB923C" stroke-dasharray="276" stroke-dashoffset="276" stroke-linecap="round" stroke-width="4"></circle>
+<circle cx="48" cy="48" fill="transparent" r="40" stroke="#F2F2F7" stroke-width="8"></circle>
+<circle cx="48" cy="48" fill="transparent" id="activityRing" r="40" stroke="#EF4444" stroke-dasharray="251" stroke-dashoffset="251" stroke-linecap="round" stroke-width="8"></circle>
+<circle cx="48" cy="48" fill="transparent" r="30" stroke="#F2F2F7" stroke-width="8"></circle>
+<circle cx="48" cy="48" fill="transparent" id="workoutRing" r="30" stroke="#4ADE80" stroke-dasharray="188" stroke-dashoffset="188" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+</div>
+</div>
+<!-- Strength Curve Chart -->
+<div class="card">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-bold">力量增长趋势 (8RM)</h3>
+<select class="text-xs bg-gray-100 border-none rounded p-1 focus:ring-0" id="strengthExerciseSelect">
+<option value="all">全部动作</option>
+</select>
+</div>
+<div id="strengthChart" style="width: 100%; height: 180px;"></div>
+</div>
+<!-- Weight Trend Chart -->
+<div class="card">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-bold">体重变化 (kg)</h3>
+<select class="text-xs bg-gray-100 border-none rounded p-1 focus:ring-0" id="weightRangeSelect">
+<option value="week">近7天</option>
+<option value="month">近30天</option>
+</select>
+</div>
+<div id="weightChart" style="width: 100%; height: 180px;"></div>
+</div>
+<!-- Recent Sessions -->
+<div>
+<h3 class="text-xl font-bold mb-3 px-1">最近活动</h3>
+<div class="space-y-3" id="recentSessionsList"></div>
+</div>
+</div>
+<!-- Navigation Tab Bar -->
+<nav class="tab-bar">
+<a class="tab-item active" href="./index.html">
+<iconify-icon icon="ion:stats-chart" width="26"></iconify-icon>
+<span>摘要</span>
+</a>
+<a class="tab-item" href="./workout.html">
+<iconify-icon icon="ion:add-circle" width="26"></iconify-icon>
+<span>训练</span>
+</a>
+<a class="tab-item" href="./history.html">
+<iconify-icon icon="ion:calendar" width="26"></iconify-icon>
+<span>历史</span>
+</a>
+<a class="tab-item" href="./body.html">
+<iconify-icon icon="ion:accessibility" width="26"></iconify-icon>
+<span>身体数据</span>
+</a>
+<a class="tab-item" href="./settings.html">
+<iconify-icon icon="ion:settings" width="26"></iconify-icon>
+<span>设置</span>
+</a>
+</nav>
+</div>
+<script>
+  window.FitLogCommon?.initPage();
+        const motivationTitle = document.getElementById('motivationTitle');
+        const motivationQuotes = [
+          '今天多一组，明天更轻松。',
+          '坚持每一次训练，身体会给你答案。',
+          '流下的每一滴汗，都会变成更强的自己。',
+          '不求一步到位，只求每天进步一点点。',
+          '练的不是次数，是更好的自己。',
+          '你累积的每次坚持，都在悄悄改变体态。'
+        ];
+        const motivationStyles = [
+          'motivation-style-gradient',
+          'motivation-style-neon',
+          'motivation-style-brush'
+        ];
+        if (motivationTitle && motivationQuotes.length) {
+          const randomIndex = Math.floor(Math.random() * motivationQuotes.length);
+          motivationTitle.textContent = motivationQuotes[randomIndex];
+          const styleIndex = Math.floor(Math.random() * motivationStyles.length);
+          motivationTitle.classList.remove(...motivationStyles);
+          motivationTitle.classList.add(motivationStyles[styleIndex]);
+        }
+        const seed = window.FITLOG_SEED || {};
+        const settings = JSON.parse(localStorage.getItem('fitlog:settings') || '{}');
+        const profile = JSON.parse(localStorage.getItem('fitlog:profile') || '{}');
+        const preferredUnit = settings.weightUnit || 'kg';
+        const storedSessions = JSON.parse(localStorage.getItem('fitlog:workout:sessions') || '[]');
+        const workoutSessions = storedSessions.length ? storedSessions : (seed.workoutSessions || []);
+        const realWorkoutSessions = Array.isArray(storedSessions) ? storedSessions : [];
+        const storedBodyRecords = JSON.parse(localStorage.getItem('fitlog:body:records') || '[]');
+        const bodyRecords = storedBodyRecords.length ? storedBodyRecords : (seed.bodyRecords || []);
+
+        const strengthExerciseSelect = document.getElementById('strengthExerciseSelect');
+        const weightRangeSelect = document.getElementById('weightRangeSelect');
+
+        const workoutGoal = 60;
+        const today = new Date().toISOString().slice(0, 10);
+        const todaySessions = workoutSessions.filter((s) => s.date === today);
+
+        const latestBodyRecord = [...bodyRecords].sort((a, b) => new Date(b.date) - new Date(a.date))[0] || {};
+        const userWeightKg = Number(profile.weightKg || profile.currentWeightKg || latestBodyRecord.weightKg || seed.profile?.currentWeightKg || 70);
+        const userHeightCm = Number(profile.heightCm || 175);
+        const userAge = Number(profile.age || 28);
+        const userGender = profile.gender === 'female' ? 'female' : 'male';
+        const activityFactor = Number(profile.activityFactor || settings.activityFactor || 1.375);
+        const bmr = userGender === 'male'
+          ? 10 * userWeightKg + 6.25 * userHeightCm - 5 * userAge + 5
+          : 10 * userWeightKg + 6.25 * userHeightCm - 5 * userAge - 161;
+        const tdee = bmr * activityFactor;
+        // 动态活动目标：默认按 TDEE 的 18% 估算，可在 settings.activityGoalKcal 覆盖
+        const activityGoal = Math.round(
+          Math.max(
+            300,
+            Math.min(900, Number(settings.activityGoalKcal || tdee * 0.18))
+          )
+        );
+
+        function estimateSessionBurnKcal(session) {
+          const durationMin = Number(session.durationMin || 0);
+          const durationHours = Math.max(0, durationMin / 60);
+          const types = Array.isArray(session.workoutTypes) && session.workoutTypes.length
+            ? session.workoutTypes
+            : [session.workoutType || '全身训练'];
+          const hasCardio = types.some((type) => String(type).includes('有氧'));
+          const met = hasCardio ? 7.0 : 5.5;
+          if (durationHours > 0) {
+            return Math.round(met * userWeightKg * durationHours);
+          }
+          // 兼容旧数据（缺少时长时回退到体积估算）
+          return Math.round(Number(session.totalVolumeKg || 0) * 0.04);
+        }
+
+        const todayActivity = todaySessions.reduce((sum, s) => sum + estimateSessionBurnKcal(s), 0);
+        const todayWorkoutMin = todaySessions.reduce((sum, s) => sum + (s.durationMin || 0), 0);
+
+        const activityRatio = todayActivity / activityGoal;
+        const activityProgress = Math.max(0, Math.min(1, activityRatio));
+        const activityOverflowProgress = Math.max(0, Math.min(1, activityRatio - 1));
+        const workoutProgress = Math.max(0, Math.min(1, todayWorkoutMin / workoutGoal));
+
+        document.getElementById('activitySummary').textContent = `活动 ${todayActivity}/${activityGoal} kcal`;
+        document.getElementById('workoutSummary').textContent = `锻炼 ${todayWorkoutMin}/${workoutGoal} min`;
+        const overKcal = Math.max(0, todayActivity - activityGoal);
+        document.getElementById('activityOverSummary').textContent =
+          overKcal > 0
+            ? `超额 +${overKcal} kcal（${activityRatio.toFixed(1)}x）`
+            : `超额 +0 kcal（${activityRatio.toFixed(1)}x）`;
+
+        const deficit = Math.max(0, activityGoal - todayActivity);
+        document.getElementById('statusSummary').textContent =
+          deficit > 0
+            ? `还差 ${deficit} kcal 达标（估算TDEE ${Math.round(tdee)}）`
+            : `今日活动已达标，超额 ${overKcal} kcal（${activityRatio.toFixed(1)}x）`;
+
+        const activityRing = document.getElementById('activityRing');
+        const activityRingOverflow = document.getElementById('activityRingOverflow');
+        const workoutRing = document.getElementById('workoutRing');
+        activityRing.setAttribute('stroke-dashoffset', String(251 * (1 - activityProgress)));
+        activityRingOverflow.setAttribute('stroke-dashoffset', String(276 * (1 - activityOverflowProgress)));
+        workoutRing.setAttribute('stroke-dashoffset', String(188 * (1 - workoutProgress)));
+
+        const recentSessionsList = document.getElementById('recentSessionsList');
+        const recentSessions = [...realWorkoutSessions]
+          .sort((a, b) => new Date(b.date) - new Date(a.date))
+          .slice(0, 3);
+
+        function normalizeWorkoutTypes(session) {
+          if (Array.isArray(session.workoutTypes) && session.workoutTypes.length) return session.workoutTypes;
+          const fallback = String(session.workoutType || '训练记录')
+            .split(/[、,/|+]/)
+            .map((item) => item.trim())
+            .filter(Boolean);
+          return fallback.length ? fallback : ['训练记录'];
+        }
+
+        const TYPE_ICON_MAP = {
+          全身训练: { icon: 'mdi:weight-lifter', bg: 'bg-indigo-100', text: 'text-indigo-600' },
+          腿部训练: { icon: 'mdi:human-male-height', bg: 'bg-blue-100', text: 'text-blue-600' },
+          胸部训练: { icon: 'mdi:arm-flex-outline', bg: 'bg-orange-100', text: 'text-orange-600' },
+          背部训练: { icon: 'mdi:weight-lifter', bg: 'bg-sky-100', text: 'text-sky-600' },
+          肩部训练: { icon: 'mdi:dumbbell', bg: 'bg-violet-100', text: 'text-violet-600' },
+          手臂训练: { icon: 'mdi:arm-flex', bg: 'bg-amber-100', text: 'text-amber-600' },
+          腹部训练: { icon: 'mdi:human-handsup', bg: 'bg-emerald-100', text: 'text-emerald-600' },
+          有氧训练: { icon: 'mdi:run-fast', bg: 'bg-green-100', text: 'text-green-600' }
+        };
+
+        function getTypeVisual(type) {
+          return TYPE_ICON_MAP[type] || { icon: 'mdi:weight-lifter', bg: 'bg-gray-100', text: 'text-gray-600' };
+        }
+
+        function renderTypeIcon(types) {
+          const picked = types.slice(0, 2);
+          if (picked.length <= 1) {
+            const visual = getTypeVisual(picked[0]);
+            return `
+              <div class="w-12 h-12 ${visual.bg} rounded-full flex items-center justify-center ${visual.text}">
+                <iconify-icon icon="${visual.icon}" width="24"></iconify-icon>
+              </div>
+            `;
+          }
+          const top = getTypeVisual(picked[0]);
+          const bottom = getTypeVisual(picked[1]);
+          return `
+            <div class="w-12 h-12 rounded-full overflow-hidden border border-gray-200">
+              <div class="h-1/2 ${top.bg} ${top.text} flex items-center justify-center">
+                <iconify-icon icon="${top.icon}" width="16"></iconify-icon>
+              </div>
+              <div class="h-1/2 ${bottom.bg} ${bottom.text} flex items-center justify-center">
+                <iconify-icon icon="${bottom.icon}" width="16"></iconify-icon>
+              </div>
+            </div>
+          `;
+        }
+
+        function computeSessionVolumeKg(session) {
+          const exercises = Array.isArray(session.exercises) ? session.exercises : [];
+          const fromSets = exercises.reduce((total, exercise) => {
+            const sets = Array.isArray(exercise.sets) ? exercise.sets : [];
+            return total + sets.reduce((sum, setItem) => sum + (Number(setItem.weightKg || 0) * Number(setItem.reps || 0)), 0);
+          }, 0);
+          if (fromSets > 0) return fromSets;
+          return Number(session.totalVolumeKg || 0);
+        }
+
+        recentSessionsList.innerHTML = recentSessions
+          .map(
+            (session) => `
+              <div class="card flex items-center gap-4 py-3">
+                ${renderTypeIcon(normalizeWorkoutTypes(session))}
+                <div class="flex-1">
+                  <h4 class="font-semibold text-sm">${normalizeWorkoutTypes(session).join(' + ')}</h4>
+                  <p class="text-xs text-gray-500">${session.date || '--'} · ${session.durationMin || 0}分钟</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-bold text-sm">${(() => {
+                    const volumeKg = computeSessionVolumeKg(session);
+                    const volume = preferredUnit === 'lb'
+                      ? Math.round(volumeKg * 2.2046226218 * 10) / 10
+                      : Math.round(volumeKg * 10) / 10;
+                    return `${volume.toLocaleString()}${preferredUnit}`;
+                  })()}</p>
+                  <p class="text-[10px] text-gray-400">总容量</p>
+                </div>
+              </div>
+            `
+          )
+          .join('');
+
+        if (!recentSessions.length) {
+          window.FitLogCommon.setEmptyState(
+            recentSessionsList,
+            '暂无最近活动',
+            '开始训练',
+            () => {
+              window.location.href = './workout.html';
+            }
+          );
+        }
+
+        function estimate8Rm(weightKg, reps) {
+          const w = Number(weightKg) || 0;
+          const r = Number(reps) || 0;
+          if (w <= 0 || r <= 0) return 0;
+          return w * (1 + r / 30) / (1 + 8 / 30);
+        }
+
+        function getSessionExercise8Rm(session, exerciseName) {
+          const targetExercises = exerciseName && exerciseName !== 'all'
+            ? (session.exercises || []).filter((item) => item.name === exerciseName)
+            : session.exercises || [];
+          const values = targetExercises.flatMap((exercise) =>
+            (exercise.sets || []).map((setItem) => estimate8Rm(setItem.weightKg, setItem.reps))
+          );
+          return values.length ? Math.max(...values) : 0;
+        }
+
+        function hydrateSession8Rm(session, exerciseName) {
+          const fromSets = getSessionExercise8Rm(session, exerciseName);
+          if (fromSets > 0) return Math.round(fromSets * 10) / 10;
+          if (exerciseName && exerciseName !== 'all') return 0;
+          if (typeof session.eightRm === 'number') return session.eightRm;
+          const oneRm = Number(session.oneRm || 0);
+          return oneRm > 0 ? Math.round((oneRm / (1 + 8 / 30)) * 10) / 10 : 0;
+        }
+
+        function getStrengthDataset(exerciseName) {
+          const source = [...workoutSessions]
+            .map((session) => ({
+              ...session,
+              calcEightRm: hydrateSession8Rm(session, exerciseName)
+            }))
+            .filter((session) => (exerciseName === 'all' ? true : session.calcEightRm > 0));
+
+          return source.sort((a, b) => new Date(a.date) - new Date(b.date)).slice(-6);
+        }
+
+        const exerciseNames = Array.from(
+          new Set(workoutSessions.flatMap((s) => (s.exercises || []).map((item) => item.name).filter(Boolean)))
+        );
+        strengthExerciseSelect.innerHTML = [
+          '<option value="all">全部动作</option>',
+          ...exerciseNames.map((name) => `<option value="${name}">${name}</option>`)
+        ].join('');
+
+        function getWeightDataset(range) {
+          const ordered = [...bodyRecords].sort((a, b) => new Date(a.date) - new Date(b.date));
+          const limit = range === 'month' ? 30 : 7;
+          return ordered.slice(-limit);
+        }
+
+        const { chartTheme, bindChartResize } = window.FitLogCommon.chart;
+        const strengthCtx = echarts.init(document.getElementById('strengthChart'));
+        const weightCtx = echarts.init(document.getElementById('weightChart'));
+        bindChartResize(strengthCtx);
+        bindChartResize(weightCtx);
+
+        function renderStrengthChart() {
+          const data = getStrengthDataset(strengthExerciseSelect.value);
+          strengthCtx.setOption({
+              textStyle: chartTheme.textStyle,
+              grid: chartTheme.grid,
+              xAxis: {
+                  type: 'category',
+                  data: data.length ? data.map((s) => s.date.slice(5).replace('-', '/')) : ['--'],
+                  axisLine: { show: false },
+                  axisTick: { show: false },
+                  axisLabel: { color: '#8E8E93', fontSize: 10 }
+              },
+              yAxis: {
+                  type: 'value',
+                  axisLine: { show: false },
+                  splitLine: { lineStyle: { type: 'dashed', color: '#E5E5EA' } },
+                  axisLabel: { color: '#8E8E93', fontSize: 10 }
+              },
+              series: [{
+                  data: data.length ? data.map((s) => s.calcEightRm || 0) : [0],
+                  type: 'line',
+                  smooth: true,
+                  symbol: 'circle',
+                  symbolSize: 6,
+                  itemStyle: { color: '#007AFF' },
+                  lineStyle: { width: 3 },
+                  areaStyle: {
+                      color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                          { offset: 0, color: 'rgba(0,122,255,0.2)' },
+                          { offset: 1, color: 'rgba(0,122,255,0)' }
+                      ])
+                  }
+              }]
+          });
+        }
+
+        function renderWeightChart() {
+          const data = getWeightDataset(weightRangeSelect.value);
+          const values = data.map((r) => r.weightKg || 0);
+          weightCtx.setOption({
+              textStyle: chartTheme.textStyle,
+              grid: chartTheme.grid,
+              xAxis: {
+                  type: 'category',
+                  data: data.length ? data.map((r) => r.date.slice(5).replace('-', '/')) : ['--'],
+                  axisLine: { show: false },
+                  axisTick: { show: false },
+                  axisLabel: { color: '#8E8E93', fontSize: 10 }
+              },
+              yAxis: {
+                  type: 'value',
+                  min: Math.min(...(values.length ? values : [75])) - 1,
+                  max: Math.max(...(values.length ? values : [80])) + 1,
+                  axisLine: { show: false },
+                  splitLine: { lineStyle: { type: 'dashed', color: '#E5E5EA' } },
+                  axisLabel: { color: '#8E8E93', fontSize: 10 }
+              },
+              series: [{
+                  data: values.length ? values : [0],
+                  type: 'line',
+                  smooth: true,
+                  symbol: 'none',
+                  itemStyle: { color: '#FF9500' },
+                  lineStyle: { width: 3 }
+              }]
+          });
+        }
+
+        strengthExerciseSelect.addEventListener('change', renderStrengthChart);
+        weightRangeSelect.addEventListener('change', renderWeightChart);
+
+        renderStrengthChart();
+        renderWeightChart();
+    </script>
+</body>
+</html>

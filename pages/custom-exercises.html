@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FitLog Pro - 自定义动作</title>
+<link rel="stylesheet" href="../styles/pages/settings.css"/>
+<link rel="stylesheet" href="../styles/output.css"/>
+<script src="https://modao.cc/agent-py/static/source/js/iconify-icon.min.1.0.7.js"></script>
+<script src="../scripts/core/app-common.js"></script>
+</head>
+<body>
+<div class="phone-container">
+<div class="status-bar">
+<span>09:41</span>
+<div class="flex gap-1">
+<iconify-icon icon="ion:cellular"></iconify-icon>
+<iconify-icon icon="ion:wifi"></iconify-icon>
+<iconify-icon icon="ion:battery-full"></iconify-icon>
+</div>
+</div>
+<div class="content-area">
+<header class="py-6 flex justify-between items-center">
+<h1 class="text-3xl font-bold">自定义动作</h1>
+<a class="text-blue-500 text-sm font-semibold" href="./settings.html">返回</a>
+</header>
+<div class="card shadow-sm">
+<div class="grid grid-cols-4 gap-2">
+<input class="bg-gray-100 rounded p-2 col-span-3 text-sm" id="exerciseNameInput" placeholder="输入动作名称，例如：杠铃箭步蹲" type="text"/>
+<button class="bg-blue-500 text-white rounded p-2 text-sm font-semibold" id="addExerciseBtn" type="button">添加</button>
+</div>
+</div>
+<div class="card shadow-sm">
+<div class="text-xs text-gray-500 mb-2" id="exerciseCountText">0 个动作</div>
+<div class="space-y-2" id="exerciseList"></div>
+</div>
+</div>
+<nav class="tab-bar">
+<a class="tab-item" href="./index.html"><iconify-icon icon="ion:stats-chart" width="26"></iconify-icon><span>摘要</span></a>
+<a class="tab-item" href="./workout.html"><iconify-icon icon="ion:add-circle" width="26"></iconify-icon><span>训练</span></a>
+<a class="tab-item" href="./history.html"><iconify-icon icon="ion:calendar" width="26"></iconify-icon><span>历史</span></a>
+<a class="tab-item" href="./body.html"><iconify-icon icon="ion:accessibility" width="26"></iconify-icon><span>身体数据</span></a>
+<a class="tab-item active" href="./settings.html"><iconify-icon icon="ion:settings" width="26"></iconify-icon><span>设置</span></a>
+</nav>
+</div>
+<script>
+  window.FitLogCommon?.initPage();
+  const STORAGE_KEY = 'fitlog:workout:library';
+  const exerciseNameInput = document.getElementById('exerciseNameInput');
+  const addExerciseBtn = document.getElementById('addExerciseBtn');
+  const exerciseList = document.getElementById('exerciseList');
+  const exerciseCountText = document.getElementById('exerciseCountText');
+
+  function readList() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      return Array.isArray(raw) ? raw : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function writeList(list) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+
+  function renderList() {
+    const list = readList();
+    exerciseCountText.textContent = `${list.length} 个动作`;
+    if (!list.length) {
+      window.FitLogCommon.setEmptyState(exerciseList, '暂无自定义动作', '添加第一个', () => exerciseNameInput.focus());
+      return;
+    }
+    exerciseList.innerHTML = list
+      .map((name, idx) => `
+        <div class="list-item">
+          <span class="text-sm">${name}</span>
+          <button class="text-xs text-red-500 font-semibold" data-remove-index="${idx}" type="button">删除</button>
+        </div>
+      `)
+      .join('');
+    exerciseList.querySelectorAll('[data-remove-index]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const index = Number(btn.dataset.removeIndex);
+        const next = readList();
+        next.splice(index, 1);
+        writeList(next);
+        renderList();
+      });
+    });
+  }
+
+  function addExercise() {
+    const name = exerciseNameInput.value.trim();
+    if (!name) {
+      window.FitLogCommon.showToast('请输入动作名称', 'error');
+      return;
+    }
+    const list = readList();
+    if (list.includes(name)) {
+      window.FitLogCommon.showToast('该动作已存在', 'info');
+      return;
+    }
+    list.push(name);
+    writeList(list);
+    exerciseNameInput.value = '';
+    renderList();
+    window.FitLogCommon.showToast('已添加动作', 'success');
+  }
+
+  addExerciseBtn.addEventListener('click', addExercise);
+  exerciseNameInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') addExercise();
+  });
+  renderList();
+</script>
+</body>
+</html>
