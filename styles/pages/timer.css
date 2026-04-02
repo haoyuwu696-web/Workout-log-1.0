@@ -1,5 +1,5 @@
 body { font-family: -apple-system; background-color: #000; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .phone-container { width: 375px; height: 812px; background-color: #FFFFFF; border-radius: 40px; overflow: hidden; position: relative; box-shadow: 0 0 0 10px #333, 0 0 0 15px #111; display: flex; flex-direction: column; }
+        .phone-container { width: min(430px, 100vw); height: min(932px, 100dvh); background-color: #FFFFFF; border-radius: 40px; overflow: hidden; position: relative; box-shadow: 0 0 0 10px #333, 0 0 0 15px #111; display: flex; flex-direction: column; }
         .content-area { flex: 1; overflow-y: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
         .content-area::-webkit-scrollbar { display: none; }
         .tab-bar {
