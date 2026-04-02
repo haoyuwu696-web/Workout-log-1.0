@@ -19,6 +19,9 @@
     body {
       height: 100%;
       overflow: hidden; /* 防止页面层上下抖动；只让 content-area 滚动 */
+      position: fixed;
+      width: 100%;
+      overscroll-behavior: none;
     }
 
     body {
@@ -31,10 +34,14 @@
       width: 100vw !important;
       height: 100dvh !important;
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       border-radius: 0 !important;
       box-shadow: none !important;
+    }
+
+    .content-area {
+      overscroll-behavior-y: contain;
+      -webkit-overflow-scrolling: touch;
     }
   }
 }

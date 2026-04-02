@@ -113,7 +113,8 @@
 </div>
 <script>
   window.FitLogCommon?.initPage();
-        const seed = window.FITLOG_SEED || {};
+        const seedDisabled = localStorage.getItem('fitlog_seed_disabled');
+        const seed = seedDisabled ? {} : (window.FITLOG_SEED || {});
         const settings = JSON.parse(localStorage.getItem('fitlog:settings') || '{}');
         const profile = JSON.parse(localStorage.getItem('fitlog:profile') || '{}');
         const storedBodyRecords = JSON.parse(localStorage.getItem('fitlog:body:records') || '[]');

@@ -353,6 +353,8 @@
     const confirmed = await showConfirmModal('确认清空所有本地健身数据吗？此操作不可恢复，建议先导出备份。', '清空');
     if (!confirmed) return;
     clearAllData();
+    // 清空后不要再回填示例数据：否则用户会觉得“清空没生效”
+    localStorage.setItem('fitlog_seed_disabled', '1');
     window.FitLogCommon.showToast('已清空本地数据', 'success');
     setTimeout(() => {
       window.location.href = './index.html';

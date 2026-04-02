@@ -154,7 +154,8 @@
 </div>
 <script>
   window.FitLogCommon?.initPage();
-  const seed = window.FITLOG_SEED || {};
+  const seedDisabled = localStorage.getItem('fitlog_seed_disabled');
+  const seed = seedDisabled ? {} : (window.FITLOG_SEED || {});
   const storedRecords = JSON.parse(localStorage.getItem('fitlog:body:records') || '[]');
   const baseRecords = storedRecords.length ? storedRecords : (seed.bodyRecords || []);
   const records = [...baseRecords].sort((a, b) => new Date(b.date) - new Date(a.date));
